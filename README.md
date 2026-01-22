@@ -3,7 +3,7 @@
 
 SerieVX is a reimagination of Allium that focuses on gameplay while having Voxel Path Tracing features, such as worldspace global illumination and colored lights. Serie has taken a huge inspiration from Soft Voxels and VXFluff with the softly lit appearance.
 
-This shader is still a work in progress, so please expect a lot of bugs and issues.
+###This shader is still a work in progress, so please expect a lot of bugs and issues.
 
 ### Huge Thanks
 - Emin for using Complementary as the base shader
