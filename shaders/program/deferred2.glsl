@@ -61,7 +61,7 @@ void main() {
     
     if (!IsValid(centerGI)) centerGI = vec3(0.0);
     if (!IsValid(centerAO)) centerAO = 0.0;
-
+    
     float centerDepth = GetLinearDepth(z0);
     vec3 centerNormal = mat3(gbufferModelView) * texelFetch(colortex5, texelCoord, 0).rgb;
     
@@ -76,11 +76,11 @@ void main() {
     float centerLum = dot(centerGI, vec3(0.2126, 0.7152, 0.0722));
     
     // Filter Parameters
-    int stepSize = 1;
-
+    int stepSize = 2; // Step Size 2
+    
     // Adapting phiColor based on variance (SVGF style):
     float phiColor = 4.0 + variance * 100.0; // Higher variance = blur more (relaxed edge)
-    phiColor = clamp(phiColor, 0.1, 1000.0); // Clamp to prevent explosions
+    phiColor = clamp(phiColor, 0.1, 1000.0);
 
     float phiNormal = 128.0;
     float phiDepth = 1.0;
@@ -119,7 +119,6 @@ void main() {
         }
     }
 
-
     float weightSum = 0.0;
     
     const float kWeights[3] = float[3](0.25, 0.5, 0.25); // 1-2-1 normalized
@@ -134,8 +133,8 @@ void main() {
             vec4 sampleGIData = texture2D(colortex11, sampleCoord);
             vec3 sampleGI = sampleGIData.rgb;
             float sampleAO = sampleGIData.a;
-
-            if (!IsValid(sampleGI)) sampleGI = vec3(0.0); // Treat bad samples as black
+            
+            if (!IsValid(sampleGI)) sampleGI = vec3(0.0);
             
             vec3 sampleNormal = mat3(gbufferModelView) * texture2D(colortex5, sampleCoord).rgb;
             float sampleDepth = GetLinearDepth(texture2D(depthtex0, sampleCoord).r);
@@ -150,15 +149,15 @@ void main() {
             if (abs(centerDepth - sampleDepth) * far < 0.5 * (1.0 + abs(x) + abs(y))) {
                  wDepth = exp(-abs(centerDepth - sampleDepth) / (phiDepth * max(length(vec2(x,y)) * 0.01, 1e-5) + 1e-5));
             }
-
+            
             // 3. Luminance (Color)
             float sampleLum = dot(sampleGI, vec3(0.2126, 0.7152, 0.0722));
             float wColor = exp(-abs(centerLum - sampleLum) / phiColor);
             
             // Combine
             float w = wNormal * wDepth * wColor;
-            if (!IsValid(w)) w = 0.0; 
-
+            if (!IsValid(w)) w = 0.0;
+            
             // Kernel Weight
             float k = kWeights[abs(x)] * kWeights[abs(y)]; // 3x3 Gaussian
             

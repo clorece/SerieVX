@@ -60,6 +60,10 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 #endif
 #define PT_TRANSPARENT_TINTS
 
+//#include "/lib/lighting/restir.glsl"
+
+#include "/lib/misc/voxelization.glsl"
+
 #if COLORED_LIGHTING_INTERNAL > 0
     #include "/lib/misc/voxelization.glsl"
 
@@ -282,7 +286,7 @@ vec3 RayDirection(vec3 normal, float dither, int i) {
         float totalWeight = 0.0;
         
         const int VOXEL_AO_SAMPLES = 8;
-        const float VOXEL_AO_RADIUS = 3.0;
+        const float VOXEL_AO_RADIUS = 1.0;
         
         vec3 tangent, bitangent;
         BuildOrthonormalBasis(normal, tangent, bitangent);
@@ -576,7 +580,7 @@ RayHit MarchRay(vec3 start, vec3 rayDir, sampler2D depthtex, vec2 screenEdge, fl
     result.hitDist = 0.0;
     result.border = 0.0;
     
-    float maxRayDistance = float(PT_RENDER_DISTANCE);
+    float maxRayDistance = float(COLORED_LIGHTING_INTERNAL);
 
     float baseStepSize = 0.05 * (0.5 + dither);
     float stepSize = baseStepSize;
@@ -674,7 +678,8 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     vec3 startPos = viewPos + normalMR * 0.01;
     
     // GI Render Distance Cutoff: Stop rendering GI on blocks beyond the set distance
-    if (length(viewPos) > float(PT_RENDER_DISTANCE)) return vec4(0.0);
+    //if (length(viewPos) > float(PT_RENDER_DISTANCE)) return vec4(0.0);
+    //if (length(viewPos) > float(PT_RENDER_DISTANCE) * 1.06) return vec4(0.0);
 
     vec3 startWorldPos = mat3(gbufferModelViewInverse) * startPos;
     
@@ -699,6 +704,66 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
         return gi;
     #endif
 
+    // ===== LIGHTING PRIORITY SYSTEM =====
+    // Priority: 1) Direct Sun  2) Indirect/Sky (in shadows)  3) Colored Lights (smart)
+    
+    vec3 directSunLight = vec3(0.0);
+    vec3 indirectFill = vec3(0.0);
+    vec3 coloredLightContrib = vec3(0.0);
+    
+    // Determine context for smart lighting
+    bool isIndoors = !outsideVolume || skyLightFactor < 0.3;
+    bool isDaytime = sunVisibility > 0.5;
+    float shadowStrength = receiverInShadow ? 1.0 : 0.0;
+    
+    // === 1. Sample LPV first (contains skylight + colored lights from shadowcomp) ===
+    vec3 receiverNormPos = receiverVoxelPos / vec3(voxelVolumeSize);
+    vec4 receiverLPV = vec4(0.0);
+    
+    //if (!outsideVolume) {
+    //    receiverLPV = GetLightVolume(receiverNormPos);
+    //}
+    
+    #if defined OVERWORLD && !defined NETHER
+        vec3 worldNormal = mat3(gbufferModelViewInverse) * normalM;
+        vec3 sunDir = mat3(gbufferModelViewInverse) * sunVec;
+        float NdotSun = max(dot(worldNormal, sunDir), 0.0);
+        float ambientNdotU = max(dot(worldNormal, vec3(0.0, 1.0, 0.0)), 0.0) * 0.5 + 0.5;
+        
+        // === 2. DIRECT SUNLIGHT (highest priority) ===
+        if (!receiverInShadow && NdotSun > 0.0) {
+            vec3 voxelPos = SceneToVoxel(receiverScenePos);
+            vec3 sunDirVoxel = mat3(gbufferModelViewInverse) * sunVec;
+            
+            // Voxel Sun Shadow (Fix Leaking)
+            // Trace from current voxel towards sun. If hit solid, shadow it.
+            float voxelShadow = 1.0;
+            #ifdef PT_USE_VOXEL_LIGHT
+                // Use Sun Direction for bias (pushes AWAY from lit floor, INTO shadowed ceiling)
+                // This closes the Peter Panning gap on blockers to prevent leaks.
+                VoxelHitResult voxelSunHit = TraceVoxelHit(receiverScenePos + sunDirVoxel * 0.1, sunDirVoxel, 256.0); 
+                if (voxelSunHit.hit) {
+                    voxelShadow = 0.0;
+                }
+            #endif
+
+            directSunLight = lightColor * NdotSun * 2.0 * (1.0 - rainFactor * 0.8) * voxelShadow;
+        }
+        
+        // === 3. INDIRECT/SKY FILL (from LPV - already has skylight from shadowcomp) ===
+        // LPV contains skylight injected in shadowcomp.glsl
+        // Scale by shadow strength - more fill in shadows, less in direct sun
+        float indirectStrength = mix(0.15, 1.0, shadowStrength);
+        //indirectFill = receiverLPV.rgb * indirectStrength * ambientNdotU;
+        
+        // Minimum ambient for very dark areas
+        //indirectFill += vec3(0.02, 0.025, 0.03) * (1.0 - skyLightFactor);
+    #endif
+    
+    // === 4. COLORED LIGHTING (from LPV) ===
+    coloredLightContrib = receiverLPV.rgb;
+    // ===== END LIGHTING PRIORITY SYSTEM =====
+
     for (int i = 0; i < numPaths; i++) {
         vec3 pathRadiance = vec3(0.0);
         vec3 pathThroughput = vec3(1.0);
@@ -716,7 +781,25 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
             float rayDither = fract(dither + float(seed) * PHI_INV);
             RayHit hit = MarchRay(currentPos, rayDir, depthtex, screenEdge, rayDither);
             
-            if (hit.hit && hit.screenPos.z < 0.99997 && hit.border > 0.001) {
+            bool useScreenspace = hit.hit && hit.screenPos.z < 0.99997 && hit.border > 0.001;
+            
+            #ifdef PT_USE_VOXEL_LIGHT
+                if (useScreenspace) {
+                    vec3 hitScenePos = (gbufferModelViewInverse * vec4(hit.worldPos, 1.0)).xyz;
+                    vec3 voxelHitPos = SceneToVoxel(hitScenePos);
+                    // Check if inside volume and if the voxel is solid
+                    if (CheckInsideVoxelVolume(voxelHitPos)) {
+                        uint voxelData = texelFetch(voxel_sampler, ivec3(voxelHitPos), 0).r;
+                        // If it's a solid block (voxelData > 0), use Worldspace lighting instead
+                        // Only use Screenspace for "details" (voxelData == 0, e.g. entities, non-voxelized blocks)
+                        if (voxelData > 0u) {
+                            useScreenspace = false;
+                        }
+                    }
+                }
+            #endif
+
+            if (useScreenspace) {
                 vec2 edgeFactor = pow2(pow2(pow2(abs(hit.screenPos.xy - 0.5) / screenEdge)));
                 vec2 jitteredUV = hit.screenPos.xy;
                 jitteredUV.y += (dither - 0.5) * (0.05 * (edgeFactor.x + edgeFactor.y));
@@ -747,6 +830,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
 
                 float blockLightMask = 1.0;
 
+                /*
                 #ifdef PT_USE_VOXEL_LIGHT
                 int voxelID = int(texture2DLod(colortex10, jitteredUV * RENDER_SCALE, 0.0).a * 255.0 + 0.5);
 
@@ -763,6 +847,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                     emissiveRadiance += pathThroughput * emissiveColor * hitAlbedo;
                 }
                 #endif
+                */
 
                 #ifdef PT_USE_RUSSIAN_ROULETTE
                 if (bounce > 0) {
@@ -782,7 +867,9 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
 
                 pathRadiance += pathThroughput * hitColor * directLightMask * blockLightMask;
                 
-                pathRadiance *= 0.25;
+                // Boost GI in shadows, reduce in direct sun
+                float giBoost = mix(0.2, 0.6, shadowStrength);
+                //pathRadiance *= giBoost;
                 
             } else {
                 // Sky contribution - world-space via voxel ray tracing
@@ -822,7 +909,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                         // Sample Voxel Albedo (Stable, stored in 3D grid)
                         // Sample slightly inside the block to get its color
                         vec3 albedoPos = voxelHit.hitPos - voxelHit.hitNormal * 0.05;
-                        vec3 sunAlbedo = GetVoxelAlbedo(albedoPos) * 10.0 * max(1.0 - eyeBrightnessSmooth.y, 0.1);
+                        vec3 sunAlbedo = GetVoxelAlbedo(albedoPos) * 20.0 * min(0.15, receiverShadowMask);
                         
                         // Use calculated sunAlbedo for tinting the heavy fallback palette logic
                         // (If we have stored color, we prefer it over manual palette)
@@ -833,7 +920,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                         
                         if (!inShadow) {
                             float hitNdotL = max(dot(voxelHit.hitNormal, sunDir), 0.0);
-                            directLight = lightColor * hitNdotL * (1.0 - rainFactor * 0.8) * sunAlbedo; 
+                            directLight = (lightColor * 0.33 + sunAlbedo * 0.67) * 3.0 * hitNdotL * (1.0 - rainFactor * 0.8); 
                         }
                         
                         // B. Indirect/Ambient from LPV
@@ -880,7 +967,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                     
                 #else
                     float groundOcclusion = exp(-max(0.0, -worldRayDir.y) * 9.87);
-                    vec3 sampledSky = ambientColor * 0.01 * min(2.0 * skyLightFactor, 1.0) - (nightFactor * 0.25);
+                    vec3 sampledSky = ambientColor * 0.01;// * min(2.0 * skyLightFactor, 1.0) - (nightFactor * 0.25);
                     vec3 skyContribution = sampledSky * max(worldRayDir.y, 0.0) * occlusionFactor * groundOcclusion;
                     skyContribution -= nightFactor * 0.1;
                     pathRadiance += pathThroughput * skyContribution;
@@ -910,7 +997,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
         #ifdef PT_USE_VOXEL_LIGHT
             // World-space voxel AO
             vec3 worldNormalAO = mat3(gbufferModelViewInverse) * normalMR;
-            float voxelAO = GetVoxelAO(startWorldPos, worldNormalAO, aoDither) * AO_I * max(skyLightFactor, 0.1);
+            float voxelAO = GetVoxelAO(startWorldPos, worldNormalAO, aoDither) * AO_I;// * max(skyLightFactor, 0.1);
             // Combine: use max of both + additional voxel contribution
             //occlusion += max(screenSpaceAO, voxelAO * 0.7) + voxelAO * 0.3;
             occlusion += voxelAO;
@@ -920,16 +1007,16 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     }
     
     totalRadiance /= float(numPaths);
-    emissiveRadiance /= float(numPaths);
+    //emissiveRadiance /= float(numPaths);
     occlusion /= float(numPaths);
     
     #if defined DEFERRED1 && defined TEMPORAL_FILTER
         giScreenPos = vec3(texCoord, 1.0);
     #endif
     
-    emissiveOut = emissiveRadiance;
+    //emissiveOut = emissiveRadiance;
     
-    gi.rgb = totalRadiance;
+    gi.rgb = directSunLight + indirectFill + coloredLightContrib + totalRadiance;
     gi.rgb = max(gi.rgb, vec3(0.0));
     
     return gi;

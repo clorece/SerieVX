@@ -26,131 +26,125 @@ float GetLinearDepth2(float depth) {
 //Includes//
 #include "/lib/util/spaceConversion.glsl"
 
+bool IsActivePixel(vec2 fragCoord) {
+    #if PT_RENDER_RESOLUTION == 3
+        return true;
+    #elif PT_RENDER_RESOLUTION == 2
+        ivec2 p = ivec2(fragCoord);
+        return !((p.x & 1) != 0 && (p.y & 1) != 0);
+    #elif PT_RENDER_RESOLUTION == 1
+        ivec2 p = ivec2(fragCoord);
+        return ((p.x + p.y) & 1) == 0;
+    #elif PT_RENDER_RESOLUTION == 0
+        ivec2 p = ivec2(fragCoord);
+        return ((p.x & 1) == 0 && (p.y & 1) == 0);
+    #endif
+    return true;
+}
+
+// Helper to check for NaNs (GLSL 1.30 has isnan, but isinf is 4.0+)
+bool IsValid(float x) { return !isnan(x); }
+bool IsValid(vec2 v) { return IsValid(v.x) && IsValid(v.y); }
+bool IsValid(vec3 v) { return IsValid(v.x) && IsValid(v.y) && IsValid(v.z); }
+
 //Program//
 void main() {
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
     
-    vec3 emissiveFiltered = vec3(0.0);
     vec3 giFiltered = vec3(0.0);
     vec3 aoFiltered = vec3(0.0);
     
-    #if GLOBAL_ILLUMINATION == 2
-        vec4 prevEmissiveData = texture2D(colortex9, texCoord);
-        vec3 prevEmissive = prevEmissiveData.rgb;
-        vec3 prevAO = vec3(prevEmissiveData.a);
-        
-        vec3 prevGI = texture2D(colortex11, texCoord).rgb;
+    // Read center data
+    vec4 centerGIData = texture2D(colortex11, texCoord);
+    vec3 centerGI = centerGIData.rgb;
+    float centerAO = centerGIData.a;
+    
+    if (!IsValid(centerGI)) centerGI = vec3(0.0);
+    if (!IsValid(centerAO)) centerAO = 0.0;
+    
+    float centerDepth = GetLinearDepth(z0);
+    vec3 centerNormal = mat3(gbufferModelView) * texelFetch(colortex5, texelCoord, 0).rgb;
+    
+    // Variance from Temporal Moments (colortex13)
+    // R=unused, G=Moment1, B=Moment2, A=HistoryLength
+    vec2 moments = texture2D(colortex13, texCoord).gb;
+    if (!IsValid(moments)) moments = vec2(0.0);
 
-        float centerDepth = GetLinearDepth(z0);
-        vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
-        vec3 centerNormal = mat3(gbufferModelView) * texture5;
-        
-        #ifdef DENOISER_ENABLED
-        if (GetLinearDepth(z0) * far > float(PT_RENDER_DISTANCE)) {
-            emissiveFiltered = prevEmissive;
-            giFiltered = prevGI;
-            aoFiltered = prevAO;
-        } else {
-            int stepSize = 2 * DENOISER_STEP_SIZE;
-            float totalWeight = 0.0;
-            float totalWeightEmissive = 0.0;
+    float variance = max(moments.y - moments.x * moments.x, 0.0);
+    if (!IsValid(variance)) variance = 0.0;
     
-            const float kernel[3] = float[3](1.0, 2.0, 1.0);
+    float centerLum = dot(centerGI, vec3(0.2126, 0.7152, 0.0722));
+    
+    // Filter Parameters
+    int stepSize = 8; // Step Size 8
+    
+    // Adapting phiColor based on variance (SVGF style):
+    float phiColor = 4.0 + variance * 100.0; // Higher variance = blur more (relaxed edge)
+    phiColor = clamp(phiColor, 0.1, 1000.0);
+
+    float phiNormal = 128.0;
+    float phiDepth = 1.0;
+
+    float weightSum = 0.0;
+    
+    const float kWeights[3] = float[3](0.25, 0.5, 0.25); // 1-2-1 normalized
+
+    for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+            vec2 offset = vec2(x, y) * float(stepSize * DENOISER_STEP_SIZE) / vec2(viewWidth, viewHeight);
+            vec2 sampleCoord = texCoord + offset;
             
-            // Variance calculation
-            float giLumSum = 0.0;
-            float giLumSqSum = 0.0;
-            float emLumSum = 0.0;
-            float emLumSqSum = 0.0;
-            float varWeight = 0.0;
+            if (!IsActivePixel(sampleCoord * vec2(viewWidth, viewHeight))) continue;
+
+            vec4 sampleGIData = texture2D(colortex11, sampleCoord);
+            vec3 sampleGI = sampleGIData.rgb;
+            float sampleAO = sampleGIData.a;
             
-            for (int y = -1; y <= 1; y++) {
-                for (int x = -1; x <= 1; x++) {
-                    vec2 offset = vec2(x, y) * float(stepSize) / vec2(viewWidth, viewHeight);
-                    vec2 sampleCoord = texCoord + offset;
-                    vec3 sampleGI = texture2D(colortex11, sampleCoord).rgb;
-                    vec3 sampleEmissive = texture2D(colortex8, sampleCoord).rgb;
-                    float w = kernel[abs(x)] * kernel[abs(y)];
-                    
-                    float giLum = dot(sampleGI, vec3(0.2126, 0.7152, 0.0722));
-                    float emLum = dot(sampleEmissive, vec3(0.2126, 0.7152, 0.0722));
-                    giLumSum += giLum * w;
-                    giLumSqSum += giLum * giLum * w;
-                    emLumSum += emLum * w;
-                    emLumSqSum += emLum * emLum * w;
-                    varWeight += w;
-                }
+            if (!IsValid(sampleGI)) sampleGI = vec3(0.0);
+            
+            vec3 sampleNormal = mat3(gbufferModelView) * texture2D(colortex5, sampleCoord).rgb;
+            float sampleDepth = GetLinearDepth(texture2D(depthtex0, sampleCoord).r);
+            
+            // Edge Stopping Functions
+            
+            // 1. Normal
+            float wNormal = pow(max(0.0, dot(centerNormal, sampleNormal)), phiNormal);
+            
+            // 2. Depth
+            float wDepth = 0.0;
+            if (abs(centerDepth - sampleDepth) * far < 0.5 * (1.0 + abs(x) + abs(y))) {
+                 wDepth = exp(-abs(centerDepth - sampleDepth) / (phiDepth * max(length(vec2(x,y)) * 0.01, 1e-5) + 1e-5));
             }
             
-            float giMeanLum = giLumSum / max(varWeight, 0.001);
-            float giVariance = max(giLumSqSum / max(varWeight, 0.001) - giMeanLum * giMeanLum, 0.0);
-            float emMeanLum = emLumSum / max(varWeight, 0.001);
-            float emVariance = max(emLumSqSum / max(varWeight, 0.001) - emMeanLum * emMeanLum, 0.0);
+            // 3. Luminance (Color)
+            float sampleLum = dot(sampleGI, vec3(0.2126, 0.7152, 0.0722));
+            float wColor = exp(-abs(centerLum - sampleLum) / phiColor);
             
-            float giVarScale = 1.0 / (1.0 + sqrt(giVariance) * 10.0);
-            float emVarScale = 1.0 / (1.0 + sqrt(emVariance) * 10.0);
+            // Combine
+            float w = wNormal * wDepth * wColor;
+            if (!IsValid(w)) w = 0.0;
+
+            // Kernel Weight
+            float k = kWeights[abs(x)] * kWeights[abs(y)]; // 3x3 Gaussian
             
-            for (int y = -1; y <= 1; y++) {
-                for (int x = -1; x <= 1; x++) {
-                    vec2 offset = vec2(x, y) * float(stepSize) / vec2(viewWidth, viewHeight);
-                    vec2 sampleCoord = texCoord + offset;
-    
-                    float spatialWeight = kernel[abs(x)] * kernel[abs(y)];
-    
-                    float sampleDepth = GetLinearDepth(texture2D(depthtex0, sampleCoord).r);
-                    float depthDiff = abs(centerDepth - sampleDepth) * far;
-                    float depthWeight = exp(-depthDiff * depthDiff * 1.0);
-    
-                    vec3 sampleTexture5 = texture2D(colortex5, sampleCoord).rgb;
-                    vec3 sampleNormal = mat3(gbufferModelView) * sampleTexture5;
-                    float normalDot = max(dot(centerNormal, sampleNormal), 0.0);
-                    float normalWeightGI = pow(normalDot, 8.0 * giVarScale);
-                    float normalWeightEmissive = pow(normalDot, 2.0 * emVarScale);
-    
-                    vec4 sampleEmissiveData = texture2D(colortex9, sampleCoord);
-                    vec3 sampleEmissive = sampleEmissiveData.rgb;
-                    vec3 sampleAO = vec3(sampleEmissiveData.a);
-                    
-                    vec3 sampleGI = texture2D(colortex11, sampleCoord).rgb;
-    
-                    float weightGI = spatialWeight * depthWeight * normalWeightGI;
-                    float weightEmissive = spatialWeight * depthWeight * normalWeightEmissive;
-                    
-                    emissiveFiltered += sampleEmissive * weightEmissive;
-                    giFiltered += sampleGI * weightGI;
-                    aoFiltered += sampleAO * weightGI;
-                    totalWeight += weightGI;
-                    totalWeightEmissive += weightEmissive;
-                }
-            }
-            
-            if (totalWeight > 0.0001) {
-                giFiltered /= totalWeight;
-                aoFiltered /= totalWeight;
-            } else {
-                giFiltered = prevGI;
-                aoFiltered = prevAO;
-            }
-            if (totalWeightEmissive > 0.0001) {
-                emissiveFiltered /= totalWeightEmissive;
-            } else {
-                emissiveFiltered = prevEmissive;
-            }
+            float finalWrap = w * k;
+
+            giFiltered += sampleGI * finalWrap;
+            aoFiltered.r += sampleAO * finalWrap;
+            weightSum += finalWrap;
         }
-        #else
-            emissiveFiltered = prevEmissive;
-            giFiltered = prevGI;
-            aoFiltered = prevAO;
-        #endif
-    #endif
+    }
     
-    emissiveFiltered = max(emissiveFiltered, 0.0);
-    giFiltered = max(giFiltered, 0.0);
-    aoFiltered = max(aoFiltered, 0.0);
+    if (weightSum > 0.001) {
+        giFiltered /= weightSum;
+        aoFiltered.r /= weightSum;
+    } else {
+        giFiltered = centerGI;
+        aoFiltered.r = centerAO;
+    }
     
-    /* RENDERTARGETS: 9,11 */
-    gl_FragData[0] = vec4(emissiveFiltered, aoFiltered.r);
-    gl_FragData[1] = vec4(giFiltered, 1.0);
+    /* RENDERTARGETS: 11 */
+    gl_FragData[0] = vec4(giFiltered, aoFiltered.r);
 }
 
 #endif

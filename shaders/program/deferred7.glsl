@@ -207,7 +207,7 @@ vec3 textureCatmullRom(sampler2D colortex, vec2 texcoord, vec2 view) {
         int samples = 4;
         float scm = 0.4;
 
-        #define SSAO_I_FACTOR 0.25
+        #define SSAO_I_FACTOR 0.5
 
         float sampleDepth = 0.0, angle = 0.0, dist = 0.0;
         float fovScale = gbufferProjection[1][1];
@@ -395,7 +395,7 @@ void main() {
 
                 vec4 reflection = GetReflection(normalM, viewPos.xyz, nViewPos, playerPos, lViewPos, z0,
                                                 depthtex0, dither, skyLightFactor, fresnel,
-                                                smoothnessD, vec3(0.0), vec3(0.0), vec3(0.0), 0.0);
+                                                smoothnessD, vec3(0.0), vec3(0.0), vec3(0.0), 0.0) * 0.25;
 
                 vec3 colorAdd = reflection.rgb * reflectColor;
                 //float colorMultInv = (0.75 - intenseFresnel * 0.5) * max(reflection.a, skyLightFactor);
@@ -473,15 +473,16 @@ void main() {
         #else
             //#ifdef EXCLUDE_ENTITIES
             //#endif
-            vec4 packedEmissive = texture2D(colortex9, ScaleToViewport(texCoord));
-            vec3 emissiveColor = packedEmissive.rgb;
-            vec3 rtao = vec3(packedEmissive.a);
+            //vec4 packedEmissive = texture2D(colortex9, ScaleToViewport(texCoord));
+            //vec3 emissiveColor = packedEmissive.rgb;
             
             float ssao = DoAmbientOcclusion(z0, linearZ0, dither, playerPos);
+            //float ssao = 1.0;
             color *= ssao;
             
             vec4 packedGI = texture2D(colortex11, ScaleToViewport(texCoord));
             vec3 gi = packedGI.rgb * 15.0 * GI_I;
+            vec3 rtao = vec3(packedGI.a);
                 #ifdef END
                     gi *= 0.15;
                 #endif
@@ -519,7 +520,7 @@ void main() {
                 vec3 colorAdd = mix(color, (gi * albedo * finalAO) * 1.0, 0.5);
                 //vec3 colorAdd = color * 0.5 + (gi * albedo * finalAO) + emissiveColor * PT_EMISSIVE_I;
                 
-                colorAdd += (emissiveColor * albedo * albedoMod) * PT_EMISSIVE_I;
+                //colorAdd += (emissiveColor * albedo * albedoMod) * PT_EMISSIVE_I;
                 
                 //vec3 colorAdd = color * 0.5;
             #endif
@@ -567,22 +568,24 @@ void main() {
                 // Reduce blending if depth changed
                 float linearZDif = abs(GetLinearDepth(texture2D(colortex1, oppositePreCoord).r) - linearZ0) * far;
                     //blendFactor *= max0(1.0 - linearZDif * BLEND_WEIGHT);
-                    blendFactor *= max0(2.0 - linearZDif) * 0.5;
+                    blendFactor *= max0(2.0 - linearZDif) * 0.4;
                 //color = mix(vec3(1,1,0), color, max0(2.0 - linearZDif) * 0.5);
 
                 //blendFactor *= float(prvCoord.x > 0.0 && prvCoord.x < 1.0 && prvCoord.y > 0.0 && prvCoord.y < 1.0);
                 float velocity = length(cameraOffset) * max(16.0 - lViewPos / gbufferProjection[1][1], 3.0);
                 blendFactor *= mix(0.4, exp(-velocity) * 0.5 + 0.5, smoothnessD);
 
-                blendFactor *= colorChangeWeight;
+                //blendFactor *= colorChangeWeight;
 
                 // Reduce blending if normal changed
+                
                 vec3 texture5P = texture2D(colortex5, oppositePreCoord, 0).rgb;
                 vec3 texture5Dif = abs(texture5 - texture5P);
                 if (texture5Dif != clamp(texture5Dif, vec3(-0.004), vec3(0.004))) {
                     blendFactor = 0.0;
                         //color.rgb = vec3(1,0,1);
                 }
+                
                 
                 blendFactor = max0(blendFactor);
                 newRef = max(newRef, vec4(0.0));

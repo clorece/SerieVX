@@ -185,14 +185,14 @@ void main() {
         ColorCodeProgram(color, -1);
     #endif
 
-    /* RENDERTARGETS:0,6,10 */
+    /* RENDERTARGETS:0,6 */
     gl_FragData[0] = color;
     gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, foliage);
-    gl_FragData[2] = vec4(isEntity, vec3(0.0));
+    //gl_FragData[2] = vec4(isEntity, vec3(0.0)); // Disabled for ASVGF History
 
     #if BLOCK_REFLECT_QUALITY >= 2 && RP_MODE >= 1
-        /* RENDERTARGETS:0,6,10,5 */
-        gl_FragData[3] = vec4(mat3(gbufferModelViewInverse) * normalM, 1.0);
+        /* RENDERTARGETS:0,6,5 */
+        gl_FragData[2] = vec4(mat3(gbufferModelViewInverse) * normalM, 1.0);
     #endif
 }
 

@@ -61,7 +61,7 @@ void main() {
     
     if (!IsValid(centerGI)) centerGI = vec3(0.0);
     if (!IsValid(centerAO)) centerAO = 0.0;
-
+    
     float centerDepth = GetLinearDepth(z0);
     vec3 centerNormal = mat3(gbufferModelView) * texelFetch(colortex5, texelCoord, 0).rgb;
     
@@ -76,49 +76,14 @@ void main() {
     float centerLum = dot(centerGI, vec3(0.2126, 0.7152, 0.0722));
     
     // Filter Parameters
-    int stepSize = 1;
-
+    int stepSize = 4; // Step Size 4
+    
     // Adapting phiColor based on variance (SVGF style):
     float phiColor = 4.0 + variance * 100.0; // Higher variance = blur more (relaxed edge)
-    phiColor = clamp(phiColor, 0.1, 1000.0); // Clamp to prevent explosions
+    phiColor = clamp(phiColor, 0.1, 1000.0);
 
     float phiNormal = 128.0;
     float phiDepth = 1.0;
-    
-    // Spatial Variance Estimation (Fallback for low history)
-    float historyLength = texture2D(colortex13, texCoord).a;
-    if (historyLength < 4.0) {
-        float sumLuma = 0.0;
-        float sumLumaSq = 0.0;
-        float sampleCount = 0.0;
-        
-        for (int i = -1; i <= 1; i++) {
-            for (int j = -1; j <= 1; j++) {
-                vec2 varOffset = vec2(i, j) * float(stepSize * DENOISER_STEP_SIZE) / vec2(viewWidth, viewHeight);
-                vec2 varCoord = texCoord + varOffset;
-                
-                if (!IsActivePixel(varCoord * vec2(viewWidth, viewHeight))) continue;
-                
-                vec3 varSample = texture2D(colortex11, varCoord).rgb;
-                float varLuma = dot(varSample, vec3(0.2126, 0.7152, 0.0722));
-                
-                sumLuma += varLuma;
-                sumLumaSq += varLuma * varLuma;
-                sampleCount += 1.0;
-            }
-        }
-        
-        if (sampleCount > 0.0) {
-            float meanLuma = sumLuma / sampleCount;
-            float spatialVariance = max((sumLumaSq / sampleCount) - (meanLuma * meanLuma), 0.0);
-            
-            // Mix temporal and spatial variance based on history length
-            // History near 0 = 100% spatial. History 4 = 100% temporal (as it becomes reliable)
-            float spatialMix = 1.0 - clamp(historyLength / 4.0, 0.0, 1.0);
-            variance = mix(variance, spatialVariance, spatialMix);
-        }
-    }
-
 
     float weightSum = 0.0;
     
@@ -134,8 +99,8 @@ void main() {
             vec4 sampleGIData = texture2D(colortex11, sampleCoord);
             vec3 sampleGI = sampleGIData.rgb;
             float sampleAO = sampleGIData.a;
-
-            if (!IsValid(sampleGI)) sampleGI = vec3(0.0); // Treat bad samples as black
+            
+            if (!IsValid(sampleGI)) sampleGI = vec3(0.0);
             
             vec3 sampleNormal = mat3(gbufferModelView) * texture2D(colortex5, sampleCoord).rgb;
             float sampleDepth = GetLinearDepth(texture2D(depthtex0, sampleCoord).r);
@@ -150,15 +115,15 @@ void main() {
             if (abs(centerDepth - sampleDepth) * far < 0.5 * (1.0 + abs(x) + abs(y))) {
                  wDepth = exp(-abs(centerDepth - sampleDepth) / (phiDepth * max(length(vec2(x,y)) * 0.01, 1e-5) + 1e-5));
             }
-
+            
             // 3. Luminance (Color)
             float sampleLum = dot(sampleGI, vec3(0.2126, 0.7152, 0.0722));
             float wColor = exp(-abs(centerLum - sampleLum) / phiColor);
             
             // Combine
             float w = wNormal * wDepth * wColor;
-            if (!IsValid(w)) w = 0.0; 
-
+            if (!IsValid(w)) w = 0.0;
+            
             // Kernel Weight
             float k = kWeights[abs(x)] * kWeights[abs(y)]; // 3x3 Gaussian
             

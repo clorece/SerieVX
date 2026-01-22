@@ -23,9 +23,7 @@
     #include "/lib/colors/moonPhaseInfluence.glsl"
 #endif
 
-#if COLORED_LIGHTING_INTERNAL > 0
-    #include "/lib/misc/voxelization.glsl"
-#endif
+
 
 #ifdef DO_PIXELATION_EFFECTS
     #include "/lib/misc/pixelation.glsl"
@@ -66,16 +64,16 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     float lightmapYM = pow(lightmap.y, 2.0);
     float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
-    vec3 lightColorM = lightColor * 1.0 * SUNLIGHT_AMOUNT;
+    vec3 lightColorM = lightColor * 1.5 * SUNLIGHT_AMOUNT;
 
     #if GLOBAL_ILLUMINATION == 2
     lightColorM *= 2.0;
 
-    /*
+    
     if (subsurfaceMode == 1) {
-        lightColorM *= 0.65 + (nightFactor);
+        lightColorM *= 1.5 + (nightFactor);
     }
-    */
+    
 
     ambientColor *= 1.5;
     #endif
@@ -337,60 +335,8 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
 
     vec3 blockLighting = lightmapXM * blocklightCol * BLOCK_LIGHTMAP_MIX;
 
-    #if COLORED_LIGHTING_INTERNAL > 0 && COLORED_LIGHTING > 0
-        // Prepare
-        #if defined GBUFFERS_HAND
-            vec3 voxelPos = SceneToVoxel(vec3(0.0));
-        #elif defined GBUFFERS_TEXTURED
-            vec3 voxelPos = SceneToVoxel(playerPos);
-        #else
-            vec3 voxelPos = SceneToVoxel(playerPos);
-            voxelPos = voxelPos + worldGeoNormal * 0.55; // should be close to 0.5 for ACL_CORNER_LEAK_FIX but 0.5 makes slabs flicker
-        #endif
+    // Old floodfill lighting removed
 
-        vec3 specialLighting = vec3(0.0);
-        vec4 lightVolume = vec4(0.0);
-        if (CheckInsideVoxelVolume(voxelPos)) {
-            vec3 voxelPosM = clamp01(voxelPos / vec3(voxelVolumeSize));
-            lightVolume = GetLightVolume(voxelPosM);
-            lightVolume = sqrt(lightVolume);
-            specialLighting = lightVolume.rgb;
-        }
-
-        // Add extra articial light for blocks that request it
-        lightmapXM = max(lightmapXM, mix(lightmapXM, 10.0, lightVolume.a));
-        specialLighting *= 1.0 + 50.0 * lightVolume.a;
-
-        // Color Balance
-        specialLighting = lightmapXM * 0.13 * DoLuminanceCorrection(specialLighting + blocklightCol * 0.05);
-
-        // Add some extra non-contrasty detail
-        AddSpecialLightDetail(specialLighting, color.rgb, emission);
-
-        #if COLORED_LIGHT_SATURATION != 100
-            specialLighting = mix(blockLighting, specialLighting, COLORED_LIGHT_SATURATION * 0.01);
-        #endif
-
-        
-        #if GLOBAL_ILLUMINATION == 2
-            specialLighting *= 0.5 * BLOCK_LIGHTMAP_MIX;
-        #endif
-
-        // Serve with distance fade
-        vec3 absPlayerPosM = abs(playerPos);
-        #if COLORED_LIGHTING_INTERNAL <= 512
-            absPlayerPosM.y *= 2.0;
-        #elif COLORED_LIGHTING_INTERNAL == 768
-            absPlayerPosM.y *= 3.0;
-        #elif COLORED_LIGHTING_INTERNAL == 1024
-            absPlayerPosM.y *= 4.0;
-        #endif
-        float maxPlayerPos = max(absPlayerPosM.x, max(absPlayerPosM.y, absPlayerPosM.z));
-        float blocklightDecider = pow2(min1(maxPlayerPos / effectiveACLdistance * 2.0));
-        //if (heldItemId != 40000 || heldItemId2 == 40000) // Hold spider eye to see vanilla lighting
-        blockLighting = mix(specialLighting, blockLighting, blocklightDecider);
-        //if (heldItemId2 == 40000 && heldItemId != 40000) blockLighting = lightVolume.rgb; // Hold spider eye to see light volume
-    #endif
 
     #if GLOBAL_ILLUMINATION == 2
         blockLighting *= 3.0;
@@ -542,7 +488,18 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     #endif
 
     // Scene Lighting Stuff
-    vec3 sceneLighting = lightColorM * shadowMult + ambientColorM * ambientMult;
+    // Scene Lighting Stuff
+    vec3 sceneLighting;
+    #if COLORED_LIGHTING_INTERNAL > 0
+        //if (lViewPos * 0.9 > float(PT_RENDER_DISTANCE)) {
+        //    sceneLighting = lightColorM * shadowMult + ambientColorM * ambientMult * 0.2;
+        //} else {
+            sceneLighting = (lightColorM * 0.1 + ambientMult * 0.1) * 0.5;
+        //}
+    #else
+        sceneLighting = (lightColorM * shadowMult + ambientColorM * ambientMult) * 0.5;
+    #endif
+
     float dotSceneLighting = dot(sceneLighting, sceneLighting);
 
     #if HELD_LIGHTING_MODE >= 1
@@ -616,14 +573,14 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     #endif
 
     // Mix Colors
-    vec3 finalDiffuse = pow2(directionShade * vanillaAO) * (blockLighting + pow2(sceneLighting) + minLighting) + pow2(emission);
+    vec3 finalDiffuse = (blockLighting + pow2(sceneLighting) + minLighting) + pow2(emission);
 
 
     finalDiffuse = sqrt(max(finalDiffuse, vec3(0.0))); // sqrt() for a bit more realistic light mix, max() to prevent NaNs
 
     // Apply Lighting
     color.rgb *= finalDiffuse;
-    color.rgb += lightHighlight * 2.5;
+    color.rgb += lightHighlight * 0.1;
     color.rgb *= pow2(1.0 - darknessLightFactor);
 }
 

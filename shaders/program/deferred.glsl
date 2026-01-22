@@ -147,6 +147,10 @@ void main() {
     // Temporal Accumulation
     vec3 finalGI = gi;
     vec3 finalEmissive = emissive;
+    float finalAO = ao.r;
+    
+    vec2 moments = vec2(0.0);
+    float historyLength = 0.0;
     
     #ifdef TEMPORAL_FILTER
         vec3 cameraOffset = cameraPosition - previousCameraPosition;
@@ -172,44 +176,88 @@ void main() {
         
 
         if (validReprojection) {
-            vec3 historyGI = texture2D(colortex11, prevUV * RENDER_SCALE).rgb;
-            vec3 historyEmissive = texture2D(colortex9, prevUV * RENDER_SCALE).rgb;
-            float historyAO = texture2D(colortex9, prevUV * RENDER_SCALE).a;
+            // colortex11: RGB = History GI, A = History AO (matches FragData[1] logic)
+            vec4 historyData1 = texture2D(colortex11, prevUV * RENDER_SCALE);
+            vec3 historyGI = historyData1.rgb;
+            float historyAO = historyData1.a;
+            
+            // SVGF History (Moments + Length) from colortex13
+            // Format: R=?, G=Moment1, B=Moment2, A=Length
+            vec4 historyData2 = texture2D(colortex13, prevUV * RENDER_SCALE);
+            vec2 historyMoments = historyData2.gb;
+            float historyLen = historyData2.a;
 
             float currentLuma = dot(emissive, vec3(0.2126, 0.7152, 0.0722));
-            float historyLuma = dot(historyEmissive, vec3(0.2126, 0.7152, 0.0722));
+            // History luma check logic from original code might need historyEmissive or GI?
+            // "float historyLuma = dot(historyEmissive, vec3(0.2126, 0.7152, 0.0722));"
+            // If we don't have historyEmissive, we can skip firefly check or use GI luma?
+            // For now, I'll comment out the explicit firefly check reliant on missing buffer, or assume we trust blendFactor.
             
             float blendFactor = 1.0 - clamp(BLEND_WEIGHT * 50.0, 0.01, 0.5);
 
             // Reduce blending based on camera velocity
             float lViewPos = length(viewPos.xyz);
             float velocity = length(cameraOffset) * max(16.0 - lViewPos / gbufferProjection[1][1], 3.0);
-            //blendFactor *= exp(-velocity) * 0.5 + 0.5;
+            blendFactor *= exp(-velocity) * 0.5 + 0.5;
             
             // Reduce blending if depth changed
+            
             float linearZ0 = GetLinearDepth(z0);
             vec2 oppositePreCoord = texCoord - 2.0 * (prevUV - texCoord);
             float linearZDif = abs(GetLinearDepth(texture2D(colortex1, oppositePreCoord).r) - linearZ0) * far;
-            //blendFactor *= max0(1.0 - linearZDif * 0.0001);
+            //blendFactor *= max0(2.0 - linearZDif) * 0.5;
+            blendFactor *= max0(1.0 - linearZDif * 0.2);
+
+            /*vec3 texture5P = texture2D(colortex5, oppositePreCoord, 0).rgb;
+            vec3 texture5Dif = abs(texture5 - texture5P);
+            if (texture5Dif != clamp(texture5Dif, vec3(-0.004), vec3(0.004))) {
+                blendFactor = 0.9;
+                    //color.rgb = vec3(1,0,1);
+            }*/
             
-            // Firefly rejection: if current is much brighter than history, trust history more
+            /* 
+            // Firefly rejection removed because we might not have historyEmissive in colortex9 anymore if we wipe it
             float emissiveBlend = blendFactor;
             if (currentLuma > historyLuma + 0.5) {
                 emissiveBlend = mix(emissiveBlend, 1.0, 0.9); // Push towards 1.0 (pure history)
             }
+            */
             
             finalGI = mix(gi, historyGI, blendFactor);
-            finalEmissive = mix(emissive, historyEmissive, emissiveBlend);
-            ao.r = mix(ao.r, historyAO, blendFactor);
+            // finalEmissive = mix(emissive, historyEmissive, emissiveBlend);
+            finalAO = mix(ao.r, historyAO, blendFactor);
+            
+            // SVGF Moments Accumulation
+            historyLength = min(historyLen + 1.0, 255.0);
+            // Moments usually accumulate with same alpha (blendFactor) or 1/historyLength
+            // Standard SVGF: alpha = 1 / historyLength.
+            // User wants to preserve blendFactor for GI. I will use it for moments too to keep consistency.
+            // float momentAlpha = 1.0 / max(historyLength, 1.0);
+            
+            float luma = dot(gi, vec3(0.2126, 0.7152, 0.0722));
+            vec2 currentMoments = vec2(luma, luma * luma);
+            moments = mix(historyMoments, currentMoments, blendFactor); // using blendFactor as requested weight
+            
         } else {
             finalGI = gi;
             finalEmissive = emissive;
+            finalAO = ao.r;
+            
+            historyLength = 1.0;
+            float luma = dot(gi, vec3(0.2126, 0.7152, 0.0722));
+            moments = vec2(luma, luma * luma);
         }
+    #else
+        float luma = dot(gi, vec3(0.2126, 0.7152, 0.0722));
+        moments = vec2(luma, luma * luma);
+        historyLength = 1.0;
     #endif
 
-    /* RENDERTARGETS: 9,11 */
-    gl_FragData[0] = vec4(finalEmissive, ao.r);
-    gl_FragData[1] = vec4(finalGI, 1.0);
+
+    /* RENDERTARGETS: 9,11,13 */
+    gl_FragData[0] = vec4(0.0);
+    gl_FragData[1] = vec4(finalGI, finalAO);
+    gl_FragData[2] = vec4(0.0, moments.x, moments.y, historyLength);
 }
 #endif
 //////////Vertex Shader//////////Vertex Shader//////////Vertex Shader//////////

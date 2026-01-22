@@ -106,12 +106,17 @@ void main() {
                                lViewPos, VdotS, VdotU, dither, auroraBorealis, nightNebula);
         //}
     #endif
-    
+
+    // We need to preserve the SVGF Moments (stored in GBA) that were written by deferred.glsl earlier.
+    // Since deferred5 runs later, it normally overwrites the whole buffer. 
+    // We read the existing data and write it back to keep the history alive for the next frame.
+    vec3 oldMoments = texture2D(colortex13, texCoord).gba;
+
     // Output: RGB = cloud color, A = cloud alpha
-    // colortex12 = clouds RGBA, colortex13 = cloud depth
+    // colortex12 = clouds RGBA, colortex13 = cloud depth (R) + Moments (GBA)
     /* RENDERTARGETS:12,13 */
     gl_FragData[0] = clouds;
-    gl_FragData[1] = vec4(cloudLinearDepth, 0.0, 0.0, 1.0);
+    gl_FragData[1] = vec4(cloudLinearDepth, oldMoments);
 }
 
 #endif
