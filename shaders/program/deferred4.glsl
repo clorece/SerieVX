@@ -76,7 +76,7 @@ void main() {
     float centerLum = dot(centerGI, vec3(0.2126, 0.7152, 0.0722));
     
     // Filter Parameters
-    int stepSize = 8; // Step Size 8
+    int stepSize = 4; // Step Size 8
     
     // Adapting phiColor based on variance (SVGF style):
     float phiColor = 4.0 + variance * 100.0; // Higher variance = blur more (relaxed edge)
@@ -89,6 +89,7 @@ void main() {
     
     const float kWeights[3] = float[3](0.25, 0.5, 0.25); // 1-2-1 normalized
 
+    #ifdef DENOISER_ENABLED
     for (int y = -1; y <= 1; y++) {
         for (int x = -1; x <= 1; x++) {
             vec2 offset = vec2(x, y) * float(stepSize * DENOISER_STEP_SIZE) / vec2(viewWidth, viewHeight);
@@ -142,6 +143,10 @@ void main() {
         giFiltered = centerGI;
         aoFiltered.r = centerAO;
     }
+    #else
+        giFiltered = centerGI;
+        aoFiltered.r = centerAO;
+    #endif
     
     /* RENDERTARGETS: 11 */
     gl_FragData[0] = vec4(giFiltered, aoFiltered.r);

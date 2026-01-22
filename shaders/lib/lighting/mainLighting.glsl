@@ -494,7 +494,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
         //if (lViewPos * 0.9 > float(PT_RENDER_DISTANCE)) {
         //    sceneLighting = lightColorM * shadowMult + ambientColorM * ambientMult * 0.2;
         //} else {
-            sceneLighting = (lightColorM * 0.1 + ambientMult * 0.1) * 0.5;
+            sceneLighting = (lightColorM * shadowMult * 0.1 + ambientColorM * 0.1) * 0.5;
         //}
     #else
         sceneLighting = (lightColorM * shadowMult + ambientColorM * ambientMult) * 0.5;

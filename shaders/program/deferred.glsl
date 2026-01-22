@@ -198,7 +198,7 @@ void main() {
             // Reduce blending based on camera velocity
             float lViewPos = length(viewPos.xyz);
             float velocity = length(cameraOffset) * max(16.0 - lViewPos / gbufferProjection[1][1], 3.0);
-            blendFactor *= exp(-velocity) * 0.5 + 0.5;
+            //blendFactor *= exp(-velocity) * 0.5 + 0.5;
             
             // Reduce blending if depth changed
             
@@ -206,14 +206,16 @@ void main() {
             vec2 oppositePreCoord = texCoord - 2.0 * (prevUV - texCoord);
             float linearZDif = abs(GetLinearDepth(texture2D(colortex1, oppositePreCoord).r) - linearZ0) * far;
             //blendFactor *= max0(2.0 - linearZDif) * 0.5;
-            blendFactor *= max0(1.0 - linearZDif * 0.2);
+            //blendFactor *= max0(1.0 - linearZDif * 0.2);
 
-            /*vec3 texture5P = texture2D(colortex5, oppositePreCoord, 0).rgb;
+            /*
+            vec3 texture5P = texture2D(colortex5, oppositePreCoord, 0).rgb;
             vec3 texture5Dif = abs(texture5 - texture5P);
             if (texture5Dif != clamp(texture5Dif, vec3(-0.004), vec3(0.004))) {
-                blendFactor = 0.9;
+                blendFactor = 0.75;
                     //color.rgb = vec3(1,0,1);
-            }*/
+            }
+            */
             
             /* 
             // Firefly rejection removed because we might not have historyEmissive in colortex9 anymore if we wipe it
@@ -268,6 +270,8 @@ flat out vec3 upVec, sunVec;
 //Common Variables//
 //Common Functions//
 //Includes//
+#include "/lib/antialiasing/jitter.glsl"
+
 //Program//
 void main() {
     gl_Position = ftransform();
@@ -276,6 +280,10 @@ void main() {
     sunVec = normalize(sunPosition);
     #if defined TAA
         gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
+    #endif
+
+    #if defined TAA
+        gl_Position.xy = TAAJitter(gl_Position.xy, gl_Position.w);
     #endif
 }
 #endif

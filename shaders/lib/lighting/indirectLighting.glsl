@@ -688,7 +688,19 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
 
     vec3 receiverScenePos = (gbufferModelViewInverse * vec4(unscaledViewPos, 1.0)).xyz;
     vec3 receiverWorldPos = receiverScenePos + cameraPosition;
-    bool receiverInShadow = GetShadow(receiverWorldPos, cameraPosition);
+
+    // Apply Shadow Bias to Receiver (Primary Surface)
+    vec3 worldGeoNormal = mat3(gbufferModelViewInverse) * normalM;
+    float distanceBias = pow(dot(receiverScenePos, receiverScenePos), 0.75);
+    distanceBias = 0.12 + 0.0008 * distanceBias;
+    
+    vec3 sunDirBias = mat3(gbufferModelViewInverse) * sunVec;
+    float receiverNdotL = max(dot(worldGeoNormal, sunDirBias), 0.0);
+    
+    vec3 receiverBias = worldGeoNormal * distanceBias * (2.0 - 0.95 * receiverNdotL);
+    vec3 receiverWorldPosBiased = receiverWorldPos + receiverBias;
+
+    bool receiverInShadow = GetShadow(receiverWorldPosBiased, cameraPosition);
     float receiverShadowMask = receiverInShadow ? 1.0 : 0.1;
     float receiverShadowMask2 = receiverInShadow ? 0.2 : 0.1;
     
@@ -731,23 +743,14 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
         float ambientNdotU = max(dot(worldNormal, vec3(0.0, 1.0, 0.0)), 0.0) * 0.5 + 0.5;
         
         // === 2. DIRECT SUNLIGHT (highest priority) ===
+        // === 2. DIRECT SUNLIGHT (highest priority) ===
         if (!receiverInShadow && NdotSun > 0.0) {
-            vec3 voxelPos = SceneToVoxel(receiverScenePos);
-            vec3 sunDirVoxel = mat3(gbufferModelViewInverse) * sunVec;
             
-            // Voxel Sun Shadow (Fix Leaking)
-            // Trace from current voxel towards sun. If hit solid, shadow it.
-            float voxelShadow = 1.0;
-            #ifdef PT_USE_VOXEL_LIGHT
-                // Use Sun Direction for bias (pushes AWAY from lit floor, INTO shadowed ceiling)
-                // This closes the Peter Panning gap on blockers to prevent leaks.
-                VoxelHitResult voxelSunHit = TraceVoxelHit(receiverScenePos + sunDirVoxel * 0.1, sunDirVoxel, 256.0); 
-                if (voxelSunHit.hit) {
-                    voxelShadow = 0.0;
-                }
-            #endif
+            // Mask direct light shadows on the side of the block (grazing angles)
+            // Increased range to (0.1, 0.3) to fully suppress flicker at grazing angles
+            float directShadowMask = smoothstep(0.1, 0.3, NdotSun);
 
-            directSunLight = lightColor * NdotSun * 2.0 * (1.0 - rainFactor * 0.8) * voxelShadow;
+            directSunLight = lightColor * NdotSun * 2.0 * (1.0 - rainFactor * 0.8);
         }
         
         // === 3. INDIRECT/SKY FILL (from LPV - already has skylight from shadowcomp) ===
@@ -895,6 +898,18 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                         
                         // A. Direct sunlight using Shadow Map
                         vec3 hitWorldPos = voxelHit.hitPos + cameraPosition;
+
+                        // Apply Shadow Bias (ported from mainLighting.glsl)
+                        // Increased bias values to resolve persistent acne in voxel tracing
+                        float distanceBias = pow(dot(voxelHit.hitPos, voxelHit.hitPos), 0.75);
+                        distanceBias = 0.25 + 0.002 * distanceBias; // Increased from 0.12 and 0.0008
+                        
+                        vec3 sunDirBias = mat3(gbufferModelViewInverse) * sunVec;
+                        float hitNdotLBias = max(dot(voxelHit.hitNormal, sunDirBias), 0.0);
+                        
+                        vec3 bias = voxelHit.hitNormal * distanceBias * (2.0 - 0.95 * hitNdotLBias);
+                        hitWorldPos += bias;
+
                         vec3 shadowPos = GetShadowPosition(hitWorldPos, cameraPosition);
                         
                         bool inShadow = true;
@@ -909,7 +924,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                         // Sample Voxel Albedo (Stable, stored in 3D grid)
                         // Sample slightly inside the block to get its color
                         vec3 albedoPos = voxelHit.hitPos - voxelHit.hitNormal * 0.05;
-                        vec3 sunAlbedo = GetVoxelAlbedo(albedoPos) * 20.0 * min(0.15, receiverShadowMask);
+                        vec3 sunAlbedo = GetVoxelAlbedo(albedoPos) * 30.0 * min(0.15, receiverShadowMask);
                         
                         // Use calculated sunAlbedo for tinting the heavy fallback palette logic
                         // (If we have stored color, we prefer it over manual palette)

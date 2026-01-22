@@ -11,7 +11,7 @@ vec2 jitterOffsets[8] = vec2[8](
                         );
 vec2 TAAJitter(vec2 coord, float w) {
     // Disable jitter for path tracing stability
-    return coord;
+    //return coord;
     
     
     vec2 outputSize = vec2(viewWidth, viewHeight) * RENDER_SCALE;

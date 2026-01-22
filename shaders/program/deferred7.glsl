@@ -510,7 +510,7 @@ void main() {
                 }
                 #endif
                 
-                vec3 finalAO = (1.0 - clamp(rtao, 0.0, 1.0)) * vec3(ssao);
+                vec3 finalAO = (1.0 - clamp(rtao, 0.0, 1.0));
                 
                 float refIntensity = 2.0;
                 float intensityRatio = refIntensity / max(PT_EMISSIVE_I, 0.01);
