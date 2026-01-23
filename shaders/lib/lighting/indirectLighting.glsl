@@ -696,7 +696,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     float distanceBias = pow(dot(receiverScenePos, receiverScenePos), 0.75);
     distanceBias = 0.12 + 0.0008 * distanceBias;
     
-    vec3 sunDirBias = mat3(gbufferModelViewInverse) * sunVec;
+    vec3 sunDirBias = mat3(gbufferModelViewInverse) * lightVec;
     float receiverNdotL = max(dot(worldGeoNormal, sunDirBias), 0.0);
     
     vec3 receiverBias = worldGeoNormal * distanceBias * (2.0 - 0.95 * receiverNdotL);
@@ -740,7 +740,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     
     #if defined OVERWORLD && !defined NETHER
         vec3 worldNormal = mat3(gbufferModelViewInverse) * normalM;
-        vec3 sunDir = mat3(gbufferModelViewInverse) * sunVec;
+        vec3 sunDir = mat3(gbufferModelViewInverse) * lightVec;
         float NdotSun = max(dot(worldNormal, sunDir), 0.0);
         float ambientNdotU = max(dot(worldNormal, vec3(0.0, 1.0, 0.0)), 0.0) * 0.5 + 0.5;
         
