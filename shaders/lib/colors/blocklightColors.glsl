@@ -64,7 +64,7 @@ vec4 GetSpecialBlocklightColor(int mat) {
 					if (mat == 15) return vec4(fireSpecialLightColor, 0.0); // Campfire:Lit
 					if (mat == 16) return vec4(vec3(1.7, 0.9, 0.4) * 4.0, 0.0); // Redstone Lamp:Lit
 					if (mat == 17) return vec4(vec3(1.7, 0.9, 0.4) * 2.0, 0.0); // Respawn Anchor:Lit
-					if (mat == 18) return vec4(vec3(1.0, 1.25, 1.5) * 1.9, 0.0); // Sea Lantern
+					if (mat == 18) return vec4(vec3(1.0, 1.25, 1.5) * 1.3, 0.0); // Sea Lantern
 					if (mat == 19) return vec4(vec3(3.0, 0.9, 0.2) * 3.0, 0.0); // Shroomlight
 				} else {
 					if (mat == 20) return vec4(vec3(1.25, 0.9, 0.4) * 2.8, 0.0); // Cave Vines:With Glow Berries
@@ -121,7 +121,7 @@ vec4 GetSpecialBlocklightColor(int mat) {
 					if (mat == 50) return vec4(vec3(1.7, 1.1, 0.2) * 0.45, 0.05); // Nether Gold Ore
 					if (mat == 51) return vec4(vec3(1.7, 1.1, 0.2) * 0.45, 0.05); // Gilded Blackstone
 					if (mat == 52) return vec4(vec3(1.8, 0.8, 0.4) * 0.6, 0.15); // Ancient Debris
-					if (mat == 53) return vec4(vec3(1.4, 0.2, 1.4) * 0.3, 0.05); // Spawner
+					if (mat == 53) return vec4(vec3(1.4, 0.2, 1.4) * 0.9, 0.05); // Spawner
 					if (mat == 54) return vec4(vec3(3.1, 1.1, 0.3) * 1.0, 0.1); // Trial Spawner:NotOminous:Active, Vault:NotOminous:Active
 					if (mat == 55) return vec4(vec3(1.7, 0.9, 0.4) * 4.0, 0.0); // Copper Bulb:BrighterOnes:Lit
 				} else {

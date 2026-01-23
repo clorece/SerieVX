@@ -568,7 +568,7 @@ void main() {
                 // Reduce blending if depth changed
                 float linearZDif = abs(GetLinearDepth(texture2D(colortex1, oppositePreCoord).r) - linearZ0) * far;
                     //blendFactor *= max0(1.0 - linearZDif * BLEND_WEIGHT);
-                    blendFactor *= max0(2.0 - linearZDif) * 0.4;
+                    blendFactor *= max0(2.0 - linearZDif) * 0.3;
                 //color = mix(vec3(1,1,0), color, max0(2.0 - linearZDif) * 0.5);
 
                 //blendFactor *= float(prvCoord.x > 0.0 && prvCoord.x < 1.0 && prvCoord.y > 0.0 && prvCoord.y < 1.0);

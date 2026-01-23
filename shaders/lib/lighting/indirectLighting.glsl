@@ -885,6 +885,18 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 // float hitSkyLightFactor = texture2DLod(colortex6, jitteredUV * RENDER_SCALE, 0.0).b;
                 // float directLightMask = 1.0 - pow2(hitSkyLightFactor);
 
+                // History Reuse (Infinite Bounces Approximation)
+                #ifdef TEMPORAL_FILTER
+                    vec3 cameraOffset = cameraPosition - previousCameraPosition;
+                    vec2 prevHitUV = Reprojection(hit.screenPos, cameraOffset);
+                    
+                    if (prevHitUV.x > 0.0 && prevHitUV.x < 1.0 && prevHitUV.y > 0.0 && prevHitUV.y < 1.0) {
+                        vec3 historyRadiance = texture2D(colortex11, prevHitUV * RENDER_SCALE).rgb;
+                        pathRadiance += pathThroughput * historyRadiance;
+                        break;
+                    }
+                #endif
+
                 pathRadiance += pathThroughput * hitColor * blockLightMask;
                 
                 // Boost GI in shadows, reduce in direct sun
