@@ -86,7 +86,7 @@ void DoBSLColorSaturation(inout vec3 color) {
 
 
 vec3 Tonemap_ACES(vec3 color) {
-    color *= TONEMAP_EXPOSURE; // Scale factor to match original 0.35 at default 2.0
+    color *= TONEMAP_EXPOSURE * (10.0 / TONEMAP_WHITE_POINT); // Scale factor to match original 0.35 at default 2.0
 
     const mat3 m1 = mat3(
         0.59719, 0.07600, 0.02840,
