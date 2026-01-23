@@ -564,7 +564,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
             lightHighlight *= pow2(moonPhaseInfluence);
         #endif
     #endif
-    vec3 finalDiffuse = (blockLighting + pow2(sceneLighting) + minLighting - (nightFactor * 0.03)) + pow2(emission);
+    vec3 finalDiffuse = (blockLighting + pow2(sceneLighting) + (minLighting * (nightFactor * 0.3))) + pow2(emission);
     // Mix Colors
     #ifdef DH_TERRAIN
         sceneLighting = pow2(sceneLighting) * 7.5;
