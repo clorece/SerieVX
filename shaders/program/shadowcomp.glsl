@@ -212,7 +212,7 @@ void main() {
 				
 				// Lower intensity at direct injection points
 				float heightFactor = float(pos.y) / float(voxelVolumeSize.y);
-				float skylightIntensity = 1.5 * (0.3 + heightFactor * 0.7);
+				float skylightIntensity = 1.0 * (0.3 + heightFactor * 0.7);
 				
 				// Blend skylight with existing light (don't override emissive)
 				light.rgb = max(light.rgb, skylightColor * skylightIntensity);

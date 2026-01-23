@@ -752,7 +752,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
             // Increased range to (0.1, 0.3) to fully suppress flicker at grazing angles
             float directShadowMask = smoothstep(0.1, 0.3, NdotSun);
 
-            directSunLight = lightColor * NdotSun * 2.0 * (1.0 - rainFactor * 0.8);
+            directSunLight = lightColor * NdotSun * 1.0 * (1.0 - rainFactor * 0.8);
         }
         
         // === 3. INDIRECT/SKY FILL (from LPV - already has skylight from shadowcomp) ===
@@ -933,7 +933,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                         float distanceBias = pow(dot(voxelHit.hitPos, voxelHit.hitPos), 0.75);
                         distanceBias = 0.25 + 0.002 * distanceBias; // Increased from 0.12 and 0.0008
                         
-                        vec3 sunDirBias = mat3(gbufferModelViewInverse) * sunVec;
+                        vec3 sunDirBias = mat3(gbufferModelViewInverse) * lightVec;
                         float hitNdotLBias = max(dot(voxelHit.hitNormal, sunDirBias), 0.0);
                         
                         vec3 bias = voxelHit.hitNormal * distanceBias * (2.0 - 0.95 * hitNdotLBias);
@@ -953,18 +953,18 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                         // Sample Voxel Albedo (Stable, stored in 3D grid)
                         // Sample slightly inside the block to get its color
                         vec3 albedoPos = voxelHit.hitPos - voxelHit.hitNormal * 0.05;
-                        vec3 sunAlbedo = GetVoxelAlbedo(albedoPos) * 20.0 * min(0.15, receiverShadowMask);
+                        vec3 sunAlbedo = GetVoxelAlbedo(albedoPos) * 10.0 * min(0.15, receiverShadowMask);
                         
                         // Use calculated sunAlbedo for tinting the heavy fallback palette logic
                         // (If we have stored color, we prefer it over manual palette)
                         // Actually, if GetVoxelAlbedo returns valid color, use it.
                         
                         vec3 directLight = vec3(0.0);
-                        vec3 sunDir = mat3(gbufferModelViewInverse) * sunVec;
+                        vec3 sunDir = mat3(gbufferModelViewInverse) * lightVec;
                         
                         if (!inShadow) {
                             float hitNdotL = max(dot(voxelHit.hitNormal, sunDir), 0.0);
-                            directLight = (lightColor * 0.5 + sunAlbedo * 0.5) * 2.0 * hitNdotL * (1.0 - rainFactor * 0.8); 
+                            directLight = (lightColor * 0.5 + sunAlbedo * 0.5) * 1.0 * hitNdotL * (1.0 - rainFactor * 0.8); 
                         }
                         
                         // B. Indirect/Ambient from LPV
