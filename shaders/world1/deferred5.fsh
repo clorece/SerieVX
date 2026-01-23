@@ -2,6 +2,6 @@
 
 #define FRAGMENT_SHADER
 #define END
-#define DEFERRED1
+#define DEFERRED5
 
 #include "/program/deferred5.glsl"

@@ -66,7 +66,7 @@ float cumulusLayerHeight = cumulusLayerStretch * 2.0;
     }
 #endif
 
-#if defined DEFERRED1 || defined DEFERRED5 || defined DH_WATER || defined GBUFFERS_WATER || defined DEFERRED
+#if defined DEFERRED1 || defined DEFERRED5 || defined DEFERRED7 || defined DH_WATER || defined GBUFFERS_WATER || defined DEFERRED
 #include "/lib/atmospherics/clouds/cloudLighting.glsl"
 
 vec4 GetVolumetricClouds(int cloudAltitude, 

@@ -2,6 +2,6 @@
 
 #define FRAGMENT_SHADER
 #define OVERWORLD
-#define DEFERRED1
+#define DEFERRED7
 
 #include "/program/deferred7.glsl"

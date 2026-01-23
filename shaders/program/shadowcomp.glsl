@@ -212,7 +212,7 @@ void main() {
 				
 				// Lower intensity at direct injection points
 				float heightFactor = float(pos.y) / float(voxelVolumeSize.y);
-				float skylightIntensity = 1.0 * (0.3 + heightFactor * 0.7);
+				float skylightIntensity = 2.0 * (0.3 + heightFactor * 0.7);
 				
 				// Blend skylight with existing light (don't override emissive)
 				light.rgb = max(light.rgb, skylightColor * skylightIntensity);
@@ -223,7 +223,7 @@ void main() {
 		
 	} else {
 		vec4 color = GetSpecialBlocklightColor(int(voxel));
-		color.rgb *= 4.0 * PT_EMISSIVE_I;
+		color.rgb *= 6.0 * PT_EMISSIVE_I;
 		
 		
 		#if defined OVERWORLD

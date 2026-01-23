@@ -1,7 +1,7 @@
 #version 130
 
 #define VERTEX_SHADER
-#define OVERWORLD
+#define END
 #define DEFERRED6
 
-#include "/program/deferred6.glsl"
+#include "/program/deferred8.glsl"

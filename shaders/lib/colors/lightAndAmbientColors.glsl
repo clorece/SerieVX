@@ -32,9 +32,9 @@
         vec3 sunsetClearAmbientColor   = vec3(0.68, 0.73, 0.78) * 0.65;
 
 
-        #if !defined COMPOSITE && !defined DEFERRED5 //ground color
+        #if !defined COMPOSITE && !defined DEFERRED7 //ground color
             vec3 nightClearLightColor = vec3(0.15, 0.185, 0.25) * 2.4 * (0.4 + vsBrightness * 0.4);
-        #elif defined DEFERRED5
+        #elif defined DEFERRED7
             vec3 nightClearLightColor = vec3(0.51, 0.54, 0.61) * 0.2; //cloud color
         #else
             vec3 nightClearLightColor = vec3(0.12, 0.14, 0.17); //light shaft color
