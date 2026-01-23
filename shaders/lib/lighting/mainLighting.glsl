@@ -64,7 +64,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     float lightmapYM = pow(lightmap.y, 4.0);
     float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
-    vec3 lightColorM = lightColor * 1.5 * SUNLIGHT_AMOUNT;
+    vec3 lightColorM = lightColor * 2.0 * SUNLIGHT_AMOUNT;
 
     #if GLOBAL_ILLUMINATION == 2
     lightColorM *= 2.0;
@@ -566,8 +566,9 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     #endif
     vec3 finalDiffuse = (blockLighting + pow2(sceneLighting) + (minLighting - (nightFactor * 0.03))) + pow2(emission);
     // Mix Colors
+    //#ifdef DH_TERRAIN
+        //sceneLighting = pow2(sceneLighting) * 7.5 + (nightFactor * 0.02);
     #ifdef DH_TERRAIN
-        sceneLighting = pow2(sceneLighting) * 7.5 + (nightFactor * 0.02);
         finalDiffuse = (blockLighting + pow2(sceneLighting)) + pow2(emission);
     #endif
     

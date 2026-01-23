@@ -964,7 +964,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                         
                         if (!inShadow) {
                             float hitNdotL = max(dot(voxelHit.hitNormal, sunDir), 0.0);
-                            directLight = (lightColor * 0.5 + sunAlbedo * 0.5) * 3.0 * hitNdotL * (1.0 - rainFactor * 0.8); 
+                            directLight = (lightColor * 0.5 + sunAlbedo * 0.5) * 2.0 * hitNdotL * (1.0 - rainFactor * 0.8); 
                         }
                         
                         // B. Indirect/Ambient from LPV

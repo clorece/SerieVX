@@ -41,7 +41,6 @@
         #define SKY_I 1.0 //[0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0 1.05 1.1 1.15 1.2 1.25 1.3 1.35 1.4 1.45 1.5 1.55 1.6 1.65 1.7 1.75 1.8 1.85 1.9 1.95 2.0 2.05 2.1 2.15 2.2 2.25 2.3 2.35 2.4 2.45 2.5 2.55 2.6 2.65 2.7 2.75 2.8 2.85 2.9 2.95 3.0 3.05 3.1 3.15 3.2 3.25 3.3 3.35 3.4 3.45 3.5 3.55 3.6 3.65 3.7 3.75 3.8 3.85 3.9 3.95 4.0]
         #define PT_MAX_BOUNCES 1 //[1 2 3]
         #define PT_STEPS 10 //[10 15 20 25 30 35 40 45 50 65 70 75 80 85 90 95 100 105 110 115 120 125]
-        #define PT_RENDER_DISTANCE 128 //[64 128 256 384 512]
         #define PT_EMISSIVE_I 1.0 //[0.1 0.25 0.5 0.75 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9 3.0 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.8 3.9 4.0 4.1 4.2 4.3 4.4 4.5 4.6 4.7 4.8 4.9 5.0]
         //#define EXCLUDE_ENTITIES
         #define PT_BLOCKLIGHT_MIX 0.0 //[0.0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
@@ -60,6 +59,7 @@
 
 
     #define COLORED_LIGHTING 256 //[0 128 256 512 768 1024]
+    #define PT_RENDER_DISTANCE COLORED_LIGHTING
     #if defined IRIS_FEATURE_CUSTOM_IMAGES && SHADOW_QUALITY > -1 && !defined MC_OS_MAC && !(defined DH_TERRAIN || defined DH_WATER)
         #if COLORED_LIGHTING > 0
             #define COLORED_LIGHTING_INTERNAL COLORED_LIGHTING
@@ -75,7 +75,7 @@
 
         #if COLORED_LIGHTING > 0
             #define COLORED_LIGHT_FOG
-            #define COLORED_LIGHT_FOG_I 0.5 //[0.15 0.20 0.25 0.30 0.35 0.40 0.45 0.50 0.55 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 1.00 1.05 1.10 1.15 1.20 1.25 1.30 1.35 1.40 1.45 1.50]
+            #define COLORED_LIGHT_FOG_I 0.75 //[0.15 0.20 0.25 0.30 0.35 0.40 0.45 0.50 0.55 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 1.00 1.05 1.10 1.15 1.20 1.25 1.30 1.35 1.40 1.45 1.50]
             
             #define PORTAL_EDGE_EFFECT
             #ifndef IRIS_HAS_CONNECTED_TEXTURES
