@@ -61,7 +61,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     #endif
 
     float lightmapY2 = pow2(lightmap.y);
-    float lightmapYM = pow(lightmap.y, 2.0);
+    float lightmapYM = pow(lightmap.y, 1.0);
     float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
     vec3 lightColorM = lightColor * 1.5 * SUNLIGHT_AMOUNT;
@@ -398,7 +398,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
             minLighting *= CAVE_LIGHTING_M;
         #endif
         minLighting *= vec3(0.45, 0.475, 0.6);
-        minLighting *= 1.0 - lightmapYM;
+        //minLighting *= 1.0 - lightmapYM;
     #else
         vec3 minLighting = vec3(0.0);
     #endif
@@ -490,15 +490,9 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     // Scene Lighting Stuff
     // Scene Lighting Stuff
     vec3 sceneLighting;
-    #if COLORED_LIGHTING_INTERNAL > 0
-        //if (lViewPos * 0.9 > float(PT_RENDER_DISTANCE)) {
-        //    sceneLighting = lightColorM * shadowMult + ambientColorM * ambientMult * 0.2;
-        //} else {
-            sceneLighting = (lightColorM * shadowMult * 0.1 + ambientColorM * 0.1) * 0.5;
-        //}
-    #else
-        sceneLighting = (lightColorM * shadowMult + ambientColorM * ambientMult) * 0.5;
-    #endif
+    //#if COLORED_LIGHTING_INTERNAL > 0
+            sceneLighting = (lightColorM * shadowMult + ambientColorM * ambientMult) * 0.05;
+    //#endif
 
     float dotSceneLighting = dot(sceneLighting, sceneLighting);
 
@@ -571,9 +565,14 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
             lightHighlight *= pow2(moonPhaseInfluence);
         #endif
     #endif
-
-    // Mix Colors
     vec3 finalDiffuse = (blockLighting + pow2(sceneLighting) + minLighting) + pow2(emission);
+    // Mix Colors
+    #ifdef DH_TERRAIN
+        sceneLighting = pow2(sceneLighting) * 7.5;
+        finalDiffuse = (blockLighting + pow2(sceneLighting)) + pow2(emission);
+    #endif
+    
+    
 
 
     finalDiffuse = sqrt(max(finalDiffuse, vec3(0.0))); // sqrt() for a bit more realistic light mix, max() to prevent NaNs

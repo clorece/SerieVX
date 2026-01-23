@@ -225,6 +225,7 @@ void main() {
 		vec4 color = GetSpecialBlocklightColor(int(voxel));
 		color.rgb *= 4.0 * PT_EMISSIVE_I;
 		
+		
 		#if defined OVERWORLD
 			int solidBlocksAbove = 0;
 			int maxTraceHeight = min(voxelVolumeSize.y - pos.y - 1, 32);
@@ -242,6 +243,7 @@ void main() {
 			float skySuppress = 1.0 * pow2(eyeBrightnessSmooth.y / 255.0 * 0.75) * daytimeFactor;// * (1.0 - isEyeInCave);
 			color.rgb *= 1.0 - skySuppress;
 		#endif
+		
 		
 		light = max(light, vec4(pow2(color.rgb), color.a));
 	}

@@ -64,6 +64,10 @@ float GetLinearDepth2(float depth) {
 #include "/lib/atmospherics/fog/mainFog.glsl"
 #include "/lib/colors/skyColors.glsl"
 
+#ifdef TAA
+    #include "/lib/antialiasing/jitter.glsl"
+#endif
+
 #if defined NETHER || END
     #include "/lib/colors/lightAndAmbientColors.glsl"
 #endif
@@ -104,13 +108,42 @@ void main() {
 
     // Use scaledCoord for ray marching (viewPos must project back to scaled buffer)
     vec4 screenPos = vec4(scaledCoord, z0, 1.0);
-    vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
-    viewPos /= viewPos.w;
+
+    // Fix World Position Stability: Subtract TAA jitter to get stable NDC
+    #ifdef TAA
+        vec2 jitterOffset = vec2(0.0);
+        vec2 outputSize = vec2(viewWidth, viewHeight) * RENDER_SCALE;
+        // Jitter is in pixels, divide by resolution to get UV/NDC offset
+        vec2 taaOffset = jitterOffsets[int(framemod8)] / outputSize;
+        
+        #if TAA_MODE == 1
+            taaOffset *= 0.25;
+        #endif
+        
+        jitterOffset = taaOffset;
+        
+        // IMPORTANT: Subtract jitter to un-do the shift applied during projection
+        screenPos.xy -= jitterOffset;
+    #endif
+
     
     // Use unscaled texCoord for shadow lookups (correct world position at any render scale)
     vec4 unscaledScreenPos = vec4(texCoord, z0, 1.0);
+    #ifdef TAA
+        // unscaledScreenPos uses texCoord (0..1). jitterOffset matches Scaled Buffer UV.
+        // We must scale the jitter offset to match unscaled texture if Render Scale != 1.0.
+        // jitterOffset = Px / (W * Scale).
+        // unscaledScreenPos delta = Px / W.
+        // So unscaledDelta = jitterOffset * Scale.
+        // (Px/(W*S)) * S = Px/W. Correct.
+        unscaledScreenPos.xy -= jitterOffset * RENDER_SCALE;
+    #endif
+
     vec4 unscaledViewPos = gbufferProjectionInverse * (unscaledScreenPos * 2.0 - 1.0);
     unscaledViewPos /= unscaledViewPos.w;
+    // Reconstruct stable viewPos from stable screenPos
+    vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
+    viewPos /= viewPos.w;
     
     vec3 nViewPos = normalize(viewPos.xyz);
     vec3 playerPos = ViewToPlayer(viewPos.xyz);
@@ -130,6 +163,8 @@ void main() {
     float VdotS = dot(nViewPos, sunVec);
     vec3 normalG = normalM;
 
+    
+
     #ifdef TAA
         float noiseMult = 1.0;
     #else
@@ -141,7 +176,7 @@ void main() {
     roughNoise = noiseMult * (roughNoise - 0.5);
     normalG += roughNoise;
 
-    gi = min(GetGI(ao, emissive, normalG, unscaledViewPos.xyz, unscaledViewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0));
+    gi = min(GetGI(ao, emissive, normalG, unscaledViewPos.xyz, unscaledViewPos.xyz, nViewPos, depthtex0, dither, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0));
     gi = max(gi, vec3(0.0));
     
     // Temporal Accumulation
@@ -257,7 +292,7 @@ void main() {
 
 
     /* RENDERTARGETS: 9,11,13 */
-    gl_FragData[0] = vec4(0.0);
+    gl_FragData[0] = vec4(0.0, 1.0, 0.0, 1.0); // DEBUG GREEN
     gl_FragData[1] = vec4(finalGI, finalAO);
     gl_FragData[2] = vec4(0.0, moments.x, moments.y, historyLength);
 }
@@ -282,8 +317,8 @@ void main() {
         gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
     #endif
 
-    #if defined TAA
-        gl_Position.xy = TAAJitter(gl_Position.xy, gl_Position.w);
-    #endif
+    //#if defined TAA
+    //    gl_Position.xy = TAAJitter(gl_Position.xy, gl_Position.w);
+    //#endif
 }
 #endif

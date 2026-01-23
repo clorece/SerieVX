@@ -574,7 +574,7 @@ struct RayHit {
     float border;
 };
 
-RayHit MarchRay(vec3 start, vec3 rayDir, sampler2D depthtex, vec2 screenEdge, float dither) {
+RayHit MarchRay(vec3 start, vec3 rayDir, sampler2D depthtex, vec2 screenEdge, float dither, vec2 jitterOffset) {
     RayHit result;
     result.hit = false;
     result.hitDist = 0.0;
@@ -605,7 +605,9 @@ RayHit MarchRay(vec3 start, vec3 rayDir, sampler2D depthtex, vec2 screenEdge, fl
             rayScreen.y < 0.0 || rayScreen.y > 1.0 ||
             rayScreen.z < 0.0 || rayScreen.z > 1.0) break;
         
-        float sampledDepth = texture2D(depthtex, rayScreen.xy * RENDER_SCALE).r;
+        // ADD Jitter to sampling coordinates to match Jittered Depth Buffer
+        vec2 sampleUV = (rayScreen.xy + jitterOffset) * RENDER_SCALE;
+        float sampledDepth = texture2D(depthtex, sampleUV).r;
         
         float currZ = GetLinearDepth(rayScreen.z);
         float nextZ = GetLinearDepth(sampledDepth);
@@ -667,7 +669,7 @@ float CosinePDF(float NdotL) {
 vec3 giScreenPos = vec3(0.0);
 
 vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 viewPos, vec3 unscaledViewPos, vec3 nViewPos, sampler2D depthtex, 
-           float dither, float skyLightFactor, float smoothness, float VdotU, float VdotS, bool entityOrHand) {
+           float dither, float smoothness, float VdotU, float VdotS, bool entityOrHand) {
     vec2 screenEdge = vec2(0.6, 0.55);
     vec3 normalMR = normalM;
 
@@ -706,7 +708,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     
     vec3 receiverVoxelPos = SceneToVoxel(receiverScenePos);
     bool outsideVolume = !CheckInsideVoxelVolume(receiverVoxelPos);
-    float occlusionFactor = outsideVolume ? pow2(skyLightFactor) : 1.0;
+    //float occlusionFactor = outsideVolume ? pow2(skyLightFactor) : 1.0;
     
     #define MINIMUM_AMBIENT vec3(0.02, 0.025, 0.03)
     
@@ -724,7 +726,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     vec3 coloredLightContrib = vec3(0.0);
     
     // Determine context for smart lighting
-    bool isIndoors = !outsideVolume || skyLightFactor < 0.3;
+    //bool isIndoors = !outsideVolume || skyLightFactor < 0.3;
     bool isDaytime = sunVisibility > 0.5;
     float shadowStrength = receiverInShadow ? 1.0 : 0.0;
     
@@ -781,8 +783,23 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
             float NdotL = max(dot(currentNormal, rayDir), 0.0);
             
             // Per-bounce dither variation to decorrelate ray patterns
+            // Per-bounce dither variation to decorrelate ray patterns
             float rayDither = fract(dither + float(seed) * PHI_INV);
-            RayHit hit = MarchRay(currentPos, rayDir, depthtex, screenEdge, rayDither);
+
+            // Calculate TAA Jitter for this frame
+            vec2 jitterOffset = vec2(0.0);
+            #ifdef TAA
+                vec2 outputSize = vec2(viewWidth, viewHeight) * RENDER_SCALE;
+                vec2 taaOffset = jitterOffsets[int(framemod8)] / outputSize;
+                
+                #if TAA_MODE == 1
+                    taaOffset *= 0.25;
+                #endif
+                
+                jitterOffset = taaOffset;
+            #endif
+
+            RayHit hit = MarchRay(currentPos, rayDir, depthtex, screenEdge, rayDither, jitterOffset);
             
             bool useScreenspace = hit.hit && hit.screenPos.z < 0.99997 && hit.border > 0.001;
             
@@ -795,7 +812,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                         uint voxelData = texelFetch(voxel_sampler, ivec3(voxelHitPos), 0).r;
                         // If it's a solid block (voxelData > 0), use Worldspace lighting instead
                         // Only use Screenspace for "details" (voxelData == 0, e.g. entities, non-voxelized blocks)
-                        if (voxelData > 0u) {
+                        if (voxelData > 0u && voxelData != 225u) {
                             useScreenspace = false;
                         }
                     }
@@ -865,10 +882,10 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 currentPos = hit.worldPos + rayDir * 0.01;
                 currentNormal = hitNormal;
 
-                float hitSkyLightFactor = texture2DLod(colortex6, jitteredUV * RENDER_SCALE, 0.0).b;
-                float directLightMask = 1.0 - pow2(hitSkyLightFactor);
+                // float hitSkyLightFactor = texture2DLod(colortex6, jitteredUV * RENDER_SCALE, 0.0).b;
+                // float directLightMask = 1.0 - pow2(hitSkyLightFactor);
 
-                pathRadiance += pathThroughput * hitColor * directLightMask * blockLightMask;
+                pathRadiance += pathThroughput * hitColor * blockLightMask;
                 
                 // Boost GI in shadows, reduce in direct sun
                 float giBoost = mix(0.2, 0.6, shadowStrength);
@@ -924,7 +941,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                         // Sample Voxel Albedo (Stable, stored in 3D grid)
                         // Sample slightly inside the block to get its color
                         vec3 albedoPos = voxelHit.hitPos - voxelHit.hitNormal * 0.05;
-                        vec3 sunAlbedo = GetVoxelAlbedo(albedoPos) * 30.0 * min(0.15, receiverShadowMask);
+                        vec3 sunAlbedo = GetVoxelAlbedo(albedoPos) * 20.0 * min(0.15, receiverShadowMask);
                         
                         // Use calculated sunAlbedo for tinting the heavy fallback palette logic
                         // (If we have stored color, we prefer it over manual palette)
@@ -935,7 +952,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                         
                         if (!inShadow) {
                             float hitNdotL = max(dot(voxelHit.hitNormal, sunDir), 0.0);
-                            directLight = (lightColor * 0.33 + sunAlbedo * 0.67) * 3.0 * hitNdotL * (1.0 - rainFactor * 0.8); 
+                            directLight = (lightColor * 0.5 + sunAlbedo * 0.5) * 2.0 * hitNdotL * (1.0 - rainFactor * 0.8); 
                         }
                         
                         // B. Indirect/Ambient from LPV
@@ -974,7 +991,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                         // Re-use logic for sky hit
                         float groundOcclusion = exp(-max(0.0, -worldRayDir.y) * 9.87);
                         vec3 sampledSky = ambientColor * 0.01;
-                        vec3 skyContribution = sampledSky * max(worldRayDir.y, 0.0) * occlusionFactor * groundOcclusion;
+                        vec3 skyContribution = sampledSky * max(worldRayDir.y, 0.0) * groundOcclusion;
                         skyContribution -= nightFactor * 0.1;
                         pathRadiance += pathThroughput * skyContribution;
                         pathRadiance += pathThroughput * MINIMUM_AMBIENT * (groundOcclusion * 0.5 + 0.5);
@@ -983,7 +1000,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 #else
                     float groundOcclusion = exp(-max(0.0, -worldRayDir.y) * 9.87);
                     vec3 sampledSky = ambientColor * 0.01;// * min(2.0 * skyLightFactor, 1.0) - (nightFactor * 0.25);
-                    vec3 skyContribution = sampledSky * max(worldRayDir.y, 0.0) * occlusionFactor * groundOcclusion;
+                    vec3 skyContribution = sampledSky * max(worldRayDir.y, 0.0) * groundOcclusion;
                     skyContribution -= nightFactor * 0.1;
                     pathRadiance += pathThroughput * skyContribution;
                     pathRadiance += pathThroughput * MINIMUM_AMBIENT * (groundOcclusion * 0.5 + 0.5);

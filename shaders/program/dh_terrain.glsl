@@ -141,14 +141,14 @@ void main() {
     vec3 noisePos = floor((playerPos + cameraPosition) * 4.0 + 0.001) / 32.0;
     float noiseTexture = Noise3D(noisePos) + 0.5;
     float noiseFactor = max0(1.0 - 0.3 * dot(color.rgb, color.rgb));
-    color.rgb *= pow(noiseTexture, 0.6 * noiseFactor);
+    //color.rgb *= pow(noiseTexture, 0.6 * noiseFactor);
 
     DoLighting(color, shadowMult, playerPos, viewPos, lViewPos, geoNormal, normalM, 0.5,
                worldGeoNormal, lmCoordM, noSmoothLighting, noDirectionalShading, noVanillaAO,
                centerShadowBias, subsurfaceMode, smoothnessG, highlightMult, emission);
 
     #if GLOBAL_ILLUMINATION == 2
-        color *= 0.5;
+        color *= 10.0;
     #endif
     /* DRAWBUFFERS:0 */
     gl_FragData[0] = color;

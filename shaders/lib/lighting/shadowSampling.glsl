@@ -126,8 +126,8 @@ vec3 GetShadow(vec3 shadowPos, float lViewPos, float lightmapY, float offset, bo
         #endif
     #endif
 
-    float colorMult = 1.0;
-    float colorPow = 1.0;
+    float colorMult = 1.2 + 3.8 * lightmapY;
+    float colorPow = 1.1 - 0.6 * pow2(pow2(pow2(lightmapY)));
 
     #if SHADOW_QUALITY >= 1
         vec3 shadow = SampleTAAFilteredShadow(shadowPos, lViewPos, offset, leaves, colorMult, colorPow);
