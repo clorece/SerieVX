@@ -63,7 +63,7 @@ void main() {
     if (!IsValid(centerAO)) centerAO = 0.0;
     
     float centerDepth = GetLinearDepth(z0);
-    vec3 centerNormal = mat3(gbufferModelView) * texelFetch(colortex5, texelCoord, 0).rgb;
+    vec3 centerNormal = normalize(mat3(gbufferModelView) * texelFetch(colortex5, texelCoord, 0).rgb);
     
     // Variance from Temporal Moments (colortex13)
     // R=unused, G=Moment1, B=Moment2, A=HistoryLength
@@ -80,7 +80,7 @@ void main() {
     
     // Adapting phiColor based on variance (SVGF style):
     float phiColor = 4.0 + variance * 100.0; // Higher variance = blur more (relaxed edge)
-    phiColor = clamp(phiColor, 0.1, 1000.0);
+    phiColor = clamp(phiColor, 0.1, 20.0);
 
     float phiNormal = 128.0;
     float phiDepth = 1.0;
@@ -129,6 +129,7 @@ void main() {
             vec2 offset = vec2(x, y) * float(stepSize * DENOISER_STEP_SIZE) / vec2(viewWidth, viewHeight);
             vec2 sampleCoord = texCoord + offset;
             
+            if (sampleCoord.x < 0.0 || sampleCoord.y < 0.0 || sampleCoord.x > 1.0 || sampleCoord.y > 1.0) continue;
             if (!IsActivePixel(sampleCoord * vec2(viewWidth, viewHeight))) continue;
 
             vec4 sampleGIData = texture2D(colortex11, sampleCoord);
@@ -137,7 +138,7 @@ void main() {
             
             if (!IsValid(sampleGI)) sampleGI = vec3(0.0);
             
-            vec3 sampleNormal = mat3(gbufferModelView) * texture2D(colortex5, sampleCoord).rgb;
+            vec3 sampleNormal = normalize(mat3(gbufferModelView) * texture2D(colortex5, sampleCoord).rgb);
             float sampleDepth = GetLinearDepth(texture2D(depthtex0, sampleCoord).r);
             
             // Edge Stopping Functions

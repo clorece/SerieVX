@@ -63,7 +63,7 @@ void main() {
     if (!IsValid(centerAO)) centerAO = 0.0;
 
     float centerDepth = GetLinearDepth(z0);
-    vec3 centerNormal = mat3(gbufferModelView) * texelFetch(colortex5, texelCoord, 0).rgb;
+    vec3 centerNormal = normalize(mat3(gbufferModelView) * texelFetch(colortex5, texelCoord, 0).rgb);
     
     // Variance from Temporal Moments (colortex13)
     // R=unused, G=Moment1, B=Moment2, A=HistoryLength
@@ -80,48 +80,15 @@ void main() {
 
     // Adapting phiColor based on variance (SVGF style):
     float phiColor = 4.0 + variance * 100.0; // Higher variance = blur more (relaxed edge)
-    phiColor = clamp(phiColor, 0.1, 1000.0); // Clamp to prevent explosions
+    phiColor = clamp(phiColor, 0.1, 20.0); // Clamp to prevent explosions
 
     float phiNormal = 128.0;
     float phiDepth = 1.0;
     
-    // Spatial Variance Estimation (Fallback for low history)
-    float historyLength = texture2D(colortex13, texCoord).a;
-    if (historyLength < 4.0) {
-        float sumLuma = 0.0;
-        float sumLumaSq = 0.0;
-        float sampleCount = 0.0;
-        
-        for (int i = -1; i <= 1; i++) {
-            for (int j = -1; j <= 1; j++) {
-                vec2 varOffset = vec2(i, j) * float(stepSize * DENOISER_STEP_SIZE) / vec2(viewWidth, viewHeight);
-                vec2 varCoord = texCoord + varOffset;
-                
-                if (!IsActivePixel(varCoord * vec2(viewWidth, viewHeight))) continue;
-                
-                vec3 varSample = texture2D(colortex11, varCoord).rgb;
-                float varLuma = dot(varSample, vec3(0.2126, 0.7152, 0.0722));
-                
-                sumLuma += varLuma;
-                sumLumaSq += varLuma * varLuma;
-                sampleCount += 1.0;
-            }
-        }
-        
-        if (sampleCount > 0.0) {
-            float meanLuma = sumLuma / sampleCount;
-            float spatialVariance = max((sumLumaSq / sampleCount) - (meanLuma * meanLuma), 0.0);
-            
-            // Mix temporal and spatial variance based on history length
-            // History near 0 = 100% spatial. History 4 = 100% temporal (as it becomes reliable)
-            float spatialMix = 1.0 - clamp(historyLength / 4.0, 0.0, 1.0);
-            variance = mix(variance, spatialVariance, spatialMix);
-        }
-    }
-
-
-    float weightSum = 0.0;
+    // ... (context) ...
     
+    float weightSum = 0.0; // Restored missing declaration
+
     #ifdef DENOISER_ENABLED
     const float kWeights[3] = float[3](0.25, 0.5, 0.25); // 1-2-1 normalized
 
@@ -130,6 +97,7 @@ void main() {
             vec2 offset = vec2(x, y) * float(stepSize * DENOISER_STEP_SIZE) / vec2(viewWidth, viewHeight);
             vec2 sampleCoord = texCoord + offset;
             
+            if (sampleCoord.x < 0.0 || sampleCoord.y < 0.0 || sampleCoord.x > 1.0 || sampleCoord.y > 1.0) continue;
             if (!IsActivePixel(sampleCoord * vec2(viewWidth, viewHeight))) continue;
 
             vec4 sampleGIData = texture2D(colortex11, sampleCoord);
@@ -138,7 +106,7 @@ void main() {
 
             if (!IsValid(sampleGI)) sampleGI = vec3(0.0); // Treat bad samples as black
             
-            vec3 sampleNormal = mat3(gbufferModelView) * texture2D(colortex5, sampleCoord).rgb;
+            vec3 sampleNormal = normalize(mat3(gbufferModelView) * texture2D(colortex5, sampleCoord).rgb);
             float sampleDepth = GetLinearDepth(texture2D(depthtex0, sampleCoord).r);
             
             // Edge Stopping Functions
