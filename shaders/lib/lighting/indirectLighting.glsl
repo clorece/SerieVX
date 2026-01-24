@@ -309,7 +309,7 @@ vec3 RayDirection(vec3 normal, float dither, int i) {
                 uint voxelData = texelFetch(voxel_sampler, ivec3(samplePos), 0).r;
                 
                 // Check if it's a solid block (not air, not light source, not transparent)
-                if (voxelData >= 1u && voxelData < 200u && voxelData != 255u) {
+                if (voxelData == 1u) {
                     float weight = 1.0 - (dist / VOXEL_AO_RADIUS);
                     weight = weight * weight; // Quadratic falloff
                     occlusion += weight;

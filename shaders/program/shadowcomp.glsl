@@ -245,7 +245,8 @@ void main() {
 		#endif
 		
 		
-		light = max(light, vec4(pow2(color.rgb), color.a));
+
+		light = vec4(pow2(color.rgb), color.a);
 	}
 
 	if ((frameCounter & 1) == 0) {

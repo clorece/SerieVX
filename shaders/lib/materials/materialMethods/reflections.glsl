@@ -1,5 +1,6 @@
 #ifdef OVERWORLD
     #include "/lib/atmospherics/sky.glsl"
+    #include "/lib/atmospherics/clouds/mainClouds.glsl"
 #endif
 #if defined END && defined DEFERRED1
     #include "/lib/atmospherics/enderBeams.glsl"
@@ -226,20 +227,13 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
                     #endif
 
                             #ifdef VL_CLOUDS_ACTIVE
-                                // Sample clouds from the raw buffer (colortex12 - matches v2.1.1)
-                                // We project the reflection direction to screen coordinates
-                                vec4 clipPosCloud = gbufferProjection * vec4(nViewPosR, 1.0);
-                                vec2 cloudCoord = (clipPosCloud.xy / clipPosCloud.w) * 0.5 + 0.5;
+                                // Draw procedural clouds directly in reflection
+                                vec3 nPlayerPosR = mat3(gbufferModelViewInverse) * nViewPosR;
+                                vec4 clouds = GetClouds(cloudLinearDepth, skyFade, cameraPosition, nPlayerPosR * 100000.0,
+                                                        1000000.0, RVdotS, RVdotU, dither, auroraBorealis, nightNebula) * 1.0;
                                 
-                                // Check if the reflection coordinate is valid
-                                if (cloudCoord.x >= 0.0 && cloudCoord.x <= 1.0 && 
-                                    cloudCoord.y >= 0.0 && cloudCoord.y <= 1.0) {
-                                    // Read from the raw cloud buffer (colortex12)
-                                    vec4 clouds = texture2D(colortex14, cloudCoord);
-                                    
-                                    // Composite clouds into sky reflection
-                                    skyReflection = mix(skyReflection, clouds.rgb, clouds.a);
-                                }
+                                // Composite clouds into sky reflection
+                                skyReflection = mix(skyReflection, clouds.rgb, clouds.a);
                             #endif
 
                     skyReflection = mix(color * 0.5, skyReflection, skyLightFactor);

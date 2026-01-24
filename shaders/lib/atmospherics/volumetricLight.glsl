@@ -7,7 +7,8 @@
 #endif
 
 #include "/lib/atmospherics/clouds/cloudCoord.glsl"
-#include "/lib/atmospherics/clouds/cloudShadows.glsl"
+// #include "/lib/atmospherics/clouds/cloudShadows.glsl"
+#include "/lib/util/noise.glsl"
 
 float GetDepth(float depth) {
     return 2.0 * near * far / (far + near - (2.0 * depth - 1.0) * (far - near));
@@ -213,8 +214,8 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
         if (currentDist > depth0) vlSample *= translucentMult;
         
         #ifdef CLOUD_SHADOWS
-            float cloudShadow = SampleCloudShadowMap(playerPos);
-            vlSample *= (1.0 - cloudShadow);
+            // float cloudShadow = SampleCloudShadowMap(playerPos);
+            // vlSample *= (1.0 - cloudShadow);
             //shadowSample *= cloudShadow;
         #endif
 

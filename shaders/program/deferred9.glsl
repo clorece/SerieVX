@@ -699,27 +699,11 @@ void main() {
         float sceneLinearDepth = 1.0;
         bool cloudIsCloser = false;
         
-        #ifdef DISTANT_HORIZONS
-            // For DH chunks, just use the original sky check (simpler, more reliable)
-            bool isDHSky = dhDepth >= 0.9999;
-            bool isRegularSky = z0 >= 0.9999;
-            
-            if (!isRegularSky) {
-                // Regular terrain visible - use depth comparison
-                sceneLinearDepth = lViewPos / far;
-                cloudIsCloser = cloudDepthRaw > 0.001 && cloudDepthRaw < sceneLinearDepth;
-            }
-            // For DH-only areas (isRegularSky && !isDHSky), don't use depth comparison
-            // Just let isSky handle it
-            
-            bool shouldRenderCloud = isSky || (!isRegularSky && clouds.a > 0.01 && cloudIsCloser);
-        #else
-            if (!isSky) {
-                sceneLinearDepth = lViewPos / far;
-                cloudIsCloser = cloudDepthRaw > 0.001 && cloudDepthRaw < sceneLinearDepth;
-            }
-            bool shouldRenderCloud = isSky || (clouds.a > 0.01 && cloudIsCloser);
-        #endif
+        if (!isSky) {
+            float cloudDist = cloudDepthRaw * cloudDepthRaw * renderDistance;
+            cloudIsCloser = cloudDepthRaw > 0.001 && cloudDist < lViewPos;
+        }
+        bool shouldRenderCloud = isSky || (clouds.a > 0.01 && cloudIsCloser);
         
         if (shouldRenderCloud) {
             // Apply atmospheric effects if needed

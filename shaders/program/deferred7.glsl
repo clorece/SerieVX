@@ -7,6 +7,8 @@
 
 //////////Fragment Shader//////////Fragment Shader//////////Fragment Shader//////////
 #ifdef FRAGMENT_SHADER
+#define DEFERRED7
+#define DEFERRED
 
 noperspective in vec2 texCoord;
 flat in vec3 upVec, sunVec;

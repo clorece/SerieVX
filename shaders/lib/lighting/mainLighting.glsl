@@ -8,7 +8,7 @@
 #include "/lib/lighting/ggx.glsl"
 
 #ifndef NETHER
-#include "/lib/atmospherics/clouds/cloudShadows.glsl"
+// #include "/lib/atmospherics/clouds/cloudShadows.glsl"
 #endif
 
 #if SHADOW_QUALITY > -1 && (defined OVERWORLD || defined END)
@@ -306,8 +306,8 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
             
             #ifndef NETHER
                 #ifdef CLOUD_SHADOWS
-                    float cloudShadow = SampleCloudShadowMap(playerPos);
-                    shadowMult *= mix(1.0, cloudShadow, lightmapY2 * sunVisibility);
+                    // float cloudShadow = SampleCloudShadowMap(playerPos);
+                    // shadowMult *= mix(1.0, cloudShadow, lightmapY2 * sunVisibility);
                 #endif
             #endif
 
