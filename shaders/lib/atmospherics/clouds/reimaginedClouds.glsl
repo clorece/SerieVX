@@ -110,11 +110,12 @@ vec4 GetVolumetricClouds(int cloudAltitude, float distanceThreshold, inout float
                 #endif
 
                 float VdotSM2 = VdotSM1 * shadowTime * 0.25;
+                VdotSM2 += pow(VdotSM1, 24.0) * 10.0; // Forward Scattering / Sun Highlight Boost
                     VdotSM2 += 0.5 * cloudShading + 0.08;
                 cloudShading = VdotSM2 * light * lightMult;
             #endif
 
-            vec3 colorSample = cloudAmbientColor + cloudLightColor * (0.07 + cloudShading);
+            vec3 colorSample = ((cloudAmbientColor + cloudLightColor) + nightFactor * 0.25) * (0.7 + cloudShading);
             vec3 cloudSkyColor = GetSky(VdotU, VdotS, dither, true, false);
             #ifdef ATM_COLOR_MULTS
                 cloudSkyColor *= sqrtAtmColorMult; // C72380KD - Reduced atmColorMult impact on some things
@@ -132,7 +133,7 @@ vec4 GetVolumetricClouds(int cloudAltitude, float distanceThreshold, inout float
             colorSample *= pow2(1.0 - maxBlindnessDarkness);
 
             cloudLinearDepth = sqrt(lTracePos / renderDistance);
-            volumetricClouds.a = pow(cloudDistanceFactor * 1.33333, 0.5 + 10.0 * pow(abs(VdotSM1), 90.0)) * cloudMult;
+            volumetricClouds.a = pow(cloudDistanceFactor * 1.33333, 0.5) * cloudMult;
             volumetricClouds.rgb = colorSample;
             break;
         }

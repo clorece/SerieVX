@@ -300,7 +300,8 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
                                 // Draw procedural clouds directly in reflection
                                 vec3 nPlayerPosR = mat3(gbufferModelViewInverse) * nViewPosR;
                                 vec4 clouds = pow(GetClouds(cloudLinearDepth, skyFade, cameraPosition, nPlayerPosR * 100000.0,
-                                                        1000000.0, RVdotS, RVdotU, dither, auroraBorealis, nightNebula) * 1.0, vec4( 1.0 / 2.2));
+                                                        1000000.0, RVdotS, RVdotU, dither, auroraBorealis, nightNebula) * 1.0, vec4( 1.0 / 2.2)) - (nightFactor * 0.2);
+                                                        clouds.a *= 0.5;
                                 
                                 // Composite clouds into sky reflection
                                 skyReflection = mix(skyReflection, clouds.rgb, clouds.a);

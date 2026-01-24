@@ -84,6 +84,12 @@
         "voxelization.glsl", "blocklightColors.glsl", "item.properties"
         The order of if-checks or block IDs don't matter. The returning IDs matter. */
 
+        #define ALWAYS_DO_IPBR_LIGHTS
+
+        #if defined IPBR || defined ALWAYS_DO_IPBR_LIGHTS
+            #define DO_IPBR_LIGHTS
+        #endif
+
         if (mat < 10564) {
             if (mat < 10356) {
                 if (mat < 10300) {
@@ -309,9 +315,14 @@
                 int voxelData = GetVoxelIDs(mat);
                 
                 // FORCE AIR (0) for excluded blocks to clear them from voxel map
-                if ((mat >= 30000 && mat != 30020) // Water, Glass, Transparents
-                || (mat < 30000 && (mat & 3) == 1) // Fences, Walls, Foliage, Non-full blocks
-                || mat < 10000 // Block entities
+                // Only clear if it's a standard block (ID 1) OR explicitly a transparent/glass block
+                // This preserves Emissive blocks (ID > 1) because their voxelData will not be 1.
+                // It also clears Non-Solid Standard Blocks (Fences, Bars, Stairs) to prevent shadows.
+                if ((mat >= 30000 &&  mat != 30020) // Water, Glass, Transparents - Always Clear
+                ||  (voxelData == 1 && ( // Only clear Standard Blocks if they match exclusion:
+                        (mat < 30000 && (mat & 3) == 1) // Fences, Walls, Foliage, Non-full blocks
+                     || (mat < 10000) // Block entities
+                    ))
                 ) {
                     voxelData = 0;
                 }

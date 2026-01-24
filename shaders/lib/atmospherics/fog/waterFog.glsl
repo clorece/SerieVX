@@ -14,6 +14,8 @@
             float fog = lViewPos / 32.0;
         #endif
 
+        fog *= 0.1;
+
         return 1.0 - exp(-fog);
     }
 #endif

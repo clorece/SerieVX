@@ -53,6 +53,9 @@ vec3 GetWorldSunDir() {
 }
 //Program//
 void main() {
+    // Disable shadows for transparent objects (Glass, Ice, etc.) EXCEPT Water (to keep caustics)
+    if (mat >= 30000 && mat != 32000) discard;
+
     vec4 color0 = texture2DLod(tex, texCoord * RENDER_SCALE, 0); 
     vec4 color1 = texture2DLod(tex, texCoord, 0); // Shadow Color
     vec3 normalM = normal, geoNormal = normal, shadowMult = vec3(1.0);
@@ -114,6 +117,11 @@ void main() {
                         vec2 cPos1 = -worldPos.xz * 0.075 - causticWind;
                         vec2 cPos2 = +worldPos.xz * 0.25 - causticWind * 2.0;
 
+                        //cPos1 *= 3.0;
+                        //cPos2 *= 3.0;
+                        causticWind *= 4.0;
+
+
                         float cMult = 17.0;
                         float offset = 0.001;
                         float caustic = 0.0;
@@ -121,7 +129,7 @@ void main() {
                                  - dot(texture2D(gaux4, cPos1 - vec2(offset, 0.0)).rg, vec2(cMult));
                         caustic += dot(texture2D(gaux4, cPos2 + vec2(0.0, offset)).rg, vec2(cMult))
                                  - dot(texture2D(gaux4, cPos2 - vec2(0.0, offset)).rg, vec2(cMult));
-                        color1.rgb = vec3(max0(min1(caustic * 0.45 + 0.5)) * 0.4 + 0.01);
+                        color1.rgb = vec3(max0(min1(caustic * 0.45 + 0.5)) * 0.4 + 0.01) * 2.0;
 
                         #if MC_VERSION < 11300
                             color1.rgb *= vec3(1.0, 1.0, 1.0);

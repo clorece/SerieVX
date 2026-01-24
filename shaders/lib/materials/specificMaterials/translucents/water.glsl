@@ -36,9 +36,13 @@
     #endif
 #endif
 
+/*
 #ifdef WATERCOLOR_CHANGED
     color.rgb *= vec3(WATERCOLOR_RM, WATERCOLOR_GM, WATERCOLOR_BM);
 #endif
+*/
+
+color.rgb = vec3(0.53, 0.75, 0.8) * 0.5;
 // ============================== End of Step 1 ============================== //
 
 #define PHYSICS_OCEAN_INJECTION
@@ -174,7 +178,7 @@
             #endif
 
             float waterFog = max0(1.0 - exp(lViewPosDifM * 0.125));
-            color.a *= 0.5 + 0.5 * waterFog;
+            color.a *= 0.0 + 1.0 * waterFog * 0.9;
 
             #if defined BRIGHT_CAVE_WATER && WATER_ALPHA_MULT < 200
                 // For better water visibility in caves and some extra color pop outdoors
@@ -264,7 +268,7 @@
             vec3 lightNormal = normalize(vec3(lightNormalP, 1.0) * tbnMatrix);
             highlightMult = dot(lightNormal, lightVec);
             highlightMult = max0(highlightMult) / max(dot(normal, lightVec), 0.17);
-            highlightMult = mix(pow2(pow2(highlightMult * 1.1)), 1.0, 1.0) * 15.0;
+            highlightMult = mix(pow2(pow2(highlightMult * 1.1)), 1.0, 1.0) * 1.0;
         #else
             smoothnessG = 0.5;
 

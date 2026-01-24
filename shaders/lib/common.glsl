@@ -484,7 +484,7 @@
         #endif
     #endif
 
-    const int shadowMapResolution = 1024; //[512 1024 1536 2048 3072 4096 8192]
+    const int shadowMapResolution = 2048; //[512 1024 1536 2048 3072 4096 8192]
 
 
     #if SSAO_I > 0
