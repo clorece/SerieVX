@@ -88,7 +88,8 @@ void main() {
                         #endif
                     }
                 #endif
-                DoNaturalShadowCalculation(color1, color2);
+                    DoNaturalShadowCalculation(color1, color2);
+                //}
             } else {
                 if (mat == 32000) { // Water
                     vec3 worldPos = position.xyz + cameraPosition;
@@ -195,8 +196,8 @@ void main() {
                     }
                 #endif
                 if (color1.a > 0.5) color1 = vec4(0.0, 0.0, 0.0, 1.0);
-                else color1 = vec4(vec3(0.2 * (1.0 - GLASS_OPACITY)), 1.0);
-                color2.rgb = vec3(0.3);
+                else color1 = vec4(vec3(0.9 * (1.0 - GLASS_OPACITY)), 1.0);
+                color2.rgb = vec3(0.95);
 
                 #if defined LIGHTSHAFTS_ACTIVE && LIGHTSHAFT_BEHAVIOUR == 1 && defined OVERWORLD
                     positionYM = 0.0; // 86AHGA
@@ -206,6 +207,7 @@ void main() {
             }
         }
     #endif
+    
 
     vec3 Lw = GetWorldSunDir();
     float NdotL = max(0.0, dot(worldGeoNormal, Lw));

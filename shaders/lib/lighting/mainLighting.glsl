@@ -493,6 +493,10 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
             sceneLighting = (lightColorM * shadowMult + ambientColorM * ambientMult) * 0.05;
     //#endif
 
+    if (subsurfaceMode == 1) {
+        sceneLighting *= 0.5;
+    }
+
     float dotSceneLighting = dot(sceneLighting, sceneLighting);
 
     #if HELD_LIGHTING_MODE >= 1
@@ -564,12 +568,12 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
             lightHighlight *= pow2(moonPhaseInfluence);
         #endif
     #endif
-    vec3 finalDiffuse = (blockLighting + pow2(sceneLighting) + (minLighting - (nightFactor * 0.03))) + pow2(emission);
+    vec3 finalDiffuse = (blockLighting + pow2(sceneLighting) + minLighting) + pow2(emission);
     // Mix Colors
     //#ifdef DH_TERRAIN
         //sceneLighting = pow2(sceneLighting) * 7.5 + (nightFactor * 0.02);
     #ifdef DH_TERRAIN
-        finalDiffuse = (blockLighting + pow2(sceneLighting)) + pow2(emission);
+        finalDiffuse = (blockLighting + sceneLighting) + pow2(emission);
     #endif
     
     

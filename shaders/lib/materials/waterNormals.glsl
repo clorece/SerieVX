@@ -49,6 +49,7 @@ vec2 GetGerstnerLayer(vec2 uv, float time, uint seed, float amplitude, float wav
 
 vec2 GetCombinedWaves(vec2 uv, vec2 wind) {
     wind *= 4.0;
+    uv *= 3.0;
     
     vec2 nMed   = texture2D(gaux4, uv + 0.25 * wind).rg - 0.5;
         nMed   += texture2D(gaux4, uv * 1.25 + 0.25 * wind).rg - 0.5;

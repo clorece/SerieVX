@@ -84,12 +84,6 @@
         "voxelization.glsl", "blocklightColors.glsl", "item.properties"
         The order of if-checks or block IDs don't matter. The returning IDs matter. */
 
-        #define ALWAYS_DO_IPBR_LIGHTS
-
-        #if defined IPBR || defined ALWAYS_DO_IPBR_LIGHTS
-            #define DO_IPBR_LIGHTS
-        #endif
-
         if (mat < 10564) {
             if (mat < 10356) {
                 if (mat < 10300) {
@@ -298,10 +292,7 @@
 
     #if defined SHADOW && defined VERTEX_SHADER
         void UpdateVoxelMap(int mat, sampler2D tex, vec2 texCoord, vec4 color) {
-            if (mat == 32000 // Water
-            || mat < 30000 && mat % 4 == 1 // Non-solid terrain
-            || mat < 10000 // Block entities or unknown blocks that we treat as non-solid
-            ) return;
+            // Early returns removed to ensure we can clear voxels by writing 0
 
             vec3 modelPos = gl_Vertex.xyz + at_midBlock / 64.0;
             vec3 viewPos = transform(gl_ModelViewMatrix, modelPos);
@@ -316,6 +307,14 @@
 
             if (isEligible && CheckInsideVoxelVolume(voxelPos)) {
                 int voxelData = GetVoxelIDs(mat);
+                
+                // FORCE AIR (0) for excluded blocks to clear them from voxel map
+                if ((mat >= 30000 && mat != 30020) // Water, Glass, Transparents
+                || (mat < 30000 && (mat & 3) == 1) // Fences, Walls, Foliage, Non-full blocks
+                || mat < 10000 // Block entities
+                ) {
+                    voxelData = 0;
+                }
                 
                 imageStore(voxel_img, ivec3(voxelPos), uvec4(voxelData, 0u, 0u, 0u));
                 

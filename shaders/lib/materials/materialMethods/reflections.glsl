@@ -15,6 +15,9 @@
 
 #define LQ_CLOUD
 
+#include "/lib/lighting/voxelPathTracing.glsl"
+#include "/lib/colors/lightAndAmbientColors.glsl"
+
 vec3 refPos = vec3(0.0);
 
 vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, float lViewPos, float z0,
@@ -100,7 +103,8 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
             if (refPos.z < 0.99997) {
                 vec2 absPos = abs(refPos.xy - 0.5);
                 vec2 cdist = absPos / rEdge;
-                float border = clamp(1.0 - pow(max(cdist.x, cdist.y), 50.0), 0.0, 1.0);
+                // float border = clamp(1.0 - pow(max(cdist.x, cdist.y), 50.0), 0.0, 1.0);
+                float border = smoothstep(0.5, 0.4, max(absPos.x, absPos.y));
                 reflection.a = border;
 
                 float lViewPosRT = length(rfragpos);
@@ -182,6 +186,72 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
     #endif
     // ============================== End of Step 2 ============================== //
 
+    // ============================== End of Step 2 ============================== //
+    
+    // ============================== Step 2.5: Voxel Reflection ============================== //
+    /*
+    #if COLORED_LIGHTING_INTERNAL > 0
+        #if defined DEFERRED1 || WATER_REFLECT_QUALITY >= 1
+        if (reflection.a < 1.0) {
+            vec3 worldRayDir = mat3(gbufferModelViewInverse) * nViewPosR;
+            vec3 startScenePos = (gbufferModelViewInverse * vec4(viewPos, 1.0)).xyz;
+            
+            // Offset start slightly to avoid self-intersection
+            startScenePos += worldRayDir * 0.1;
+
+            float remainingAlpha = 1.0 - reflection.a;
+            
+            VoxelHitResult voxelHit = TraceVoxelHit(startScenePos, worldRayDir, 256.0);
+            
+            if (voxelHit.hit) {
+                vec3 albedo = GetVoxelAlbedo(voxelHit.hitPos - voxelHit.hitNormal * 0.05);
+                
+                // Simple lighting: LPV (Ambient)
+                vec3 voxelPos = SceneToVoxel(voxelHit.hitPos);
+                vec3 normPos = voxelPos / vec3(voxelVolumeSize);
+                vec4 lightVol = GetLightVolume(normPos);
+                
+                // Add some directional lighting approximation if possible, or just use LPV
+                // LPV has skylight and blocklight.
+                // We can also assume some sun lighting if hitting top? 
+                // TraceVoxelHit returns hitNormal.
+                vec3 sunDir = mat3(gbufferModelViewInverse) * sunVec; // sunVec is uniform? Or passed in?
+                // sunVec is available in reflections.glsl (line 38 uses it).
+                
+                float NdotS = max(dot(voxelHit.hitNormal, sunDir), 0.0);
+                vec3 directLight = vec3(0.0);
+                
+                // Check shadow map?
+                // GetShadow is available if we include indirectLighting.glsl, but we didn't include it. 
+                // We implied use of voxelPathTracing.glsl.
+                // Re-implementing Shadow Check here would be expensive.
+                // Let's rely on LPV + Simple Sun.
+                
+                // Check if sky is visible from voxel hit (simple vertical check)
+                float skyLight = lightVol.a; // encapsulated in LPV alpha usually? 
+                // In GetVoxelSkylight: lightVolume.a is used for sky exposure.
+                
+                // Only apply direct sun if sky exposure is high?
+                if (lightVol.a > 0.5) {
+                    directLight = lightColor * NdotS * (1.0 - rainFactor) * lightVol.a;
+                }
+                
+                vec3 voxelColor = albedo * (lightVol.rgb + directLight + 0.05) * 2.0; // + ambient
+                
+                // Fog for voxel reflection
+                float dist = distance(startScenePos, voxelHit.hitPos);
+                // Simple fog approach
+                float fogFactor = 1.0 - exp(-dist * 0.005);
+                voxelColor = mix(voxelColor, fogColor, fogFactor); // fogColor uniform?
+                
+                reflection.rgb = mix(voxelColor, reflection.rgb, reflection.a);
+                reflection.a = 1.0; // Voxel hit is solid
+            }
+        }
+        #endif
+    #endif
+    */
+
     // ============================== Step 3: Add Sky Reflection ============================== //
     #if defined DEFERRED1 || WATER_REFLECT_QUALITY >= 1
         if (reflection.a < 1.0)
@@ -229,8 +299,8 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
                             #ifdef VL_CLOUDS_ACTIVE
                                 // Draw procedural clouds directly in reflection
                                 vec3 nPlayerPosR = mat3(gbufferModelViewInverse) * nViewPosR;
-                                vec4 clouds = GetClouds(cloudLinearDepth, skyFade, cameraPosition, nPlayerPosR * 100000.0,
-                                                        1000000.0, RVdotS, RVdotU, dither, auroraBorealis, nightNebula) * 1.0;
+                                vec4 clouds = pow(GetClouds(cloudLinearDepth, skyFade, cameraPosition, nPlayerPosR * 100000.0,
+                                                        1000000.0, RVdotS, RVdotU, dither, auroraBorealis, nightNebula) * 1.0, vec4( 1.0 / 2.2));
                                 
                                 // Composite clouds into sky reflection
                                 skyReflection = mix(skyReflection, clouds.rgb, clouds.a);

@@ -87,9 +87,9 @@
 
            #if WATER_STYLE >= 2
                 #ifdef WATER_PARALLAX
-                    const int steps = 8;
+                    const int steps = 4;
                     const float stepSize = inversesqrt(float(steps));
-                    const float maxHeight = 0.01;
+                    const float maxHeight = 0.005;
 
                     vec3 rayStep = stepSize * vec3(viewVector.xy, viewVector.z) / viewVector.z;
 

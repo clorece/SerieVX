@@ -236,6 +236,10 @@ void main() {
                worldGeoNormal, lmCoordM, noSmoothLighting, noDirectionalShading, false,
                false, subsurfaceMode, smoothnessG, highlightMult, emission);
 
+    if(mat != 30020) {
+        color.rgb *= 4.0;
+    }
+
     // Reflections
     #if WATER_REFLECT_QUALITY >= 0
         #ifdef LIGHT_COLOR_MULTS
