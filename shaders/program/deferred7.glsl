@@ -72,6 +72,26 @@ void main() {
     vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
     viewPos /= viewPos.w;
     float lViewPos = length(viewPos.xyz);
+    
+    #ifdef DISTANT_HORIZONS
+        float z0DH = texture2D(dhDepthTex, actualTexCoord * RENDER_SCALE).r;
+        if (z0 >= 1.0 && z0DH < 1.0) {
+            // Use DH depth when regular terrain is at far plane but DH has geometry
+            vec4 screenPosDH = vec4(actualTexCoord, z0DH, 1.0);
+            vec4 viewPosDH = dhProjectionInverse * (screenPosDH * 2.0 - 1.0);
+            viewPosDH /= viewPosDH.w;
+            lViewPos = length(viewPosDH.xyz);
+            z0 = z0DH; // Update z0 so skyFade check works correctly
+        } else if (z0 < 1.0 && z0DH < 1.0) {
+            // Both have geometry - use the closer one
+            vec4 screenPosDH = vec4(actualTexCoord, z0DH, 1.0);
+            vec4 viewPosDH = dhProjectionInverse * (screenPosDH * 2.0 - 1.0);
+            viewPosDH /= viewPosDH.w;
+            float lViewPosDH = length(viewPosDH.xyz);
+            lViewPos = min(lViewPos, lViewPosDH);
+        }
+    #endif
+    
     vec3 nViewPos = normalize(viewPos.xyz);
     vec3 playerPos = ViewToPlayer(viewPos.xyz);
 

@@ -49,6 +49,22 @@ bool IsActivePixel(ivec2 p) {
     #endif
 }
 
+// Helper to get combined depth (uses DH when regular depth is at far plane)
+float GetCombinedDepth(vec2 coord) {
+    float depth = texture2D(depthtex0, coord).r;
+    #ifdef DISTANT_HORIZONS
+        if (depth >= 1.0) {
+            float dhDepth = texture2D(dhDepthTex, coord).r;
+            if (dhDepth < 1.0) {
+                // Convert DH depth to a comparable value
+                // When DH has geometry and regular doesn't, use a value < 1.0
+                return 0.999; // Indicates "has geometry but far"
+            }
+        }
+    #endif
+    return depth;
+}
+
 // Smart Blur: Fills holes and softens edges (combined horizontal + vertical)
 vec4 SmartBlur(sampler2D cloudTex, vec2 coord) {
     vec4 sum = vec4(0.0);
@@ -59,7 +75,7 @@ vec4 SmartBlur(sampler2D cloudTex, vec2 coord) {
     float weights[4] = float[4](0.35, 0.25, 0.15, 0.08);
     vec2 pixelSize = vec2(1.0 / viewWidth, 1.0 / viewHeight);
     
-    float centerDepth = texture2D(depthtex0, coord).r;
+    float centerDepth = GetCombinedDepth(coord);
     
     // Center Sample
     vec4 centerSample = texture2D(cloudTex, coord);
@@ -88,11 +104,11 @@ vec4 SmartBlur(sampler2D cloudTex, vec2 coord) {
         vec4 sampleU = texture2D(cloudTex, posU);
         vec4 sampleD = texture2D(cloudTex, posD);
         
-        // Depth safety for each sample
-        float depthR = texture2D(depthtex0, posR).r;
-        float depthL = texture2D(depthtex0, posL).r;
-        float depthU = texture2D(depthtex0, posU).r;
-        float depthD = texture2D(depthtex0, posD).r;
+        // Depth safety for each sample (now considers DH depth)
+        float depthR = GetCombinedDepth(posR);
+        float depthL = GetCombinedDepth(posL);
+        float depthU = GetCombinedDepth(posU);
+        float depthD = GetCombinedDepth(posD);
         
         float dwR = abs(centerDepth - depthR) < 0.01 ? 1.0 : 0.0;
         float dwL = abs(centerDepth - depthL) < 0.01 ? 1.0 : 0.0;

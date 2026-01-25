@@ -703,7 +703,10 @@ void main() {
             float cloudDist = cloudDepthRaw * cloudDepthRaw * renderDistance;
             cloudIsCloser = cloudDepthRaw > 0.001 && cloudDist < lViewPos;
         }
-        bool shouldRenderCloud = isSky || (clouds.a > 0.01 && cloudIsCloser);
+        
+        // Only composite clouds here if there's solid terrain AND cloud is closer
+        // For sky pixels, defer to composite pass where we can check for water/translucents
+        bool shouldRenderCloud = !isSky && clouds.a > 0.01 && cloudIsCloser;
         
         if (shouldRenderCloud) {
             // Apply atmospheric effects if needed

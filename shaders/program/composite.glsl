@@ -294,6 +294,43 @@ void main() {
         #endif
     }
 
+    // Cloud compositing for sky/translucent pixels (deferred from deferred9)
+    // This runs after water has been rendered, so z0 now includes water depth
+    #ifdef VL_CLOUDS_ACTIVE
+        // Check if this was a sky pixel in deferred9 (where clouds weren't composited)
+        // z1 = terrain depth (no translucents), z0 = final depth (with translucents)
+        bool wasSkySolid = z1 >= 0.9999;
+        #ifdef DISTANT_HORIZONS
+            float dhDepthComp = texelFetch(dhDepthTex, texelCoord, 0).r;
+            wasSkySolid = wasSkySolid && dhDepthComp >= 0.9999;
+        #endif
+        
+        if (wasSkySolid) {
+            // Read cloud data
+            vec4 cloudsComp = texture2D(colortex14, texCoord);
+            float cloudDepthRawComp = texture2D(colortex13, texCoord).r;
+            
+            if (cloudsComp.a > 0.01 && cloudDepthRawComp > 0.001) {
+                // Check if water/translucent is closer than the cloud
+                bool hasTranslucent = z0 < 0.9999; // There's a translucent (water) in front
+                
+                float cloudDistComp = cloudDepthRawComp * cloudDepthRawComp * renderDistance;
+                
+                // Only render cloud if no translucent is closer, or cloud is closer than translucent
+                bool shouldRenderCloudComp = true;
+                if (hasTranslucent) {
+                    // Calculate translucent distance
+                    shouldRenderCloudComp = cloudDistComp < lViewPos;
+                }
+                
+                if (shouldRenderCloudComp) {
+                    cloudsComp = max(cloudsComp, vec4(0.0));
+                    color = mix(color, cloudsComp.rgb, cloudsComp.a);
+                }
+            }
+        }
+    #endif
+
     #ifdef COLORED_LIGHT_FOG
         color /= 1.0 + pow2(GetLuminance(lightFog)) * lightFogMult * 2.0;
         color += lightFog * lightFogMult * 0.5;
