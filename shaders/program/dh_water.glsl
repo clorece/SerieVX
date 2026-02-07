@@ -177,7 +177,7 @@ void main() {
 
         float skyLightFactor = pow2(max(lmCoordM.y - 0.7, 0.0) * 3.33333);
         #if SHADOW_QUALITY > -1 && WATER_REFLECT_QUALITY >= 2 && WATER_MAT_QUALITY >= 2
-            skyLightFactor = max(skyLightFactor, min1(dot(shadowMult, shadowMult)));
+            skyLightFactor = max(skyLightFactor, min1(dot(shadowMult, shadowMult)) * lmCoordM.y);
         #endif
 
         vec4 reflection = GetReflection(normalM, viewPos.xyz, nViewPos, playerPos, lViewPos, -1.0,
