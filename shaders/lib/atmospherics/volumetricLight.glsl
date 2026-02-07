@@ -25,11 +25,13 @@ vec4 DistortShadow(vec4 shadowpos, float distortFactor) {
     return shadowpos;
 }
 
+#ifndef ROBOBO_SKY_GLSL
 float GetMiePhase(float cosTheta, float g) {
     float g2 = g * g;
     float denom = 1.0 + g2 - 2.0 * g * cosTheta;
     return (1.0 - g2) / (4.0 * 3.14159265 * pow(max(denom, 0.001), 1.5));
 }
+#endif
 
 vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucentMult, float lViewPos0, float lViewPos1, vec3 nViewPos, float VdotL, float VdotU, float VdotS, vec2 texCoord, float z0, float z1, float dither) {
     vec4 volumetricLight = vec4(0.0);
@@ -40,7 +42,7 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
     #endif
 
     #ifdef OVERWORLD
-        vec3 vlColor = lightColor * 0.5 + GetSky(VdotU, VdotS, dither, true, true) * 0.5; 
+        vec3 vlColor = lightColor * 0.5; 
 
         
         float vlSceneIntensity = isEyeInWater != 1 ? vlFactor : 1.0;
@@ -135,6 +137,73 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
 
     #ifdef OVERWORLD
         float maxCurrentDist = min(depth1, maxDist);
+        
+        #ifndef VL_MIN_HEIGHT
+            #define VL_MIN_HEIGHT -64.0
+        #endif
+        #ifndef VL_MAX_HEIGHT
+            #define VL_MAX_HEIGHT 320.0
+        #endif
+
+        vec3 wViewPos = mat3(gbufferModelViewInverse) * nViewPos;
+        float wViewPosY = wViewPos.y;
+        
+        // Ray-Plane Intersection
+        float t0 = (VL_MIN_HEIGHT - cameraPosition.y) / wViewPosY;
+        float t1 = (VL_MAX_HEIGHT - cameraPosition.y) / wViewPosY;
+        
+        float tNear = min(t0, t1);
+        float tFar = max(t0, t1);
+        
+        if (wViewPosY > 0.0) { // Looking up
+             tFar = t1;
+             tNear = t0;
+        } 
+        
+        // Bound checks
+        float vlStart = max(0.0, tNear);
+        float vlEnd = max(0.0, tFar);
+
+        // Allow infinite ceiling if looking up? No, boundaries requested.
+        
+        float originalMaxDist = maxDist;
+        
+        // Apply bounds to the view-limited distance
+        addition = max(addition, vlStart);
+        maxCurrentDist = min(maxCurrentDist, vlEnd);
+        
+        // If adjustment made the range invalid
+        if (addition >= maxCurrentDist) {
+            maxCurrentDist = addition;
+            //sampleCount = 0; // Skip
+        }
+        
+        // Recalculate step size for the new range
+        // We concentrate samples in the valid range
+        if (sampleCount > 0 && maxCurrentDist > addition) {
+             distMult = (maxCurrentDist - addition) / float(sampleCount);
+        }
+
+        // Adjust density weight because we are changing the integration step size (distMult)
+        // Original step was ~ maxDist / sampleCount.
+        // New step is (maxCurrentDist - addition) / sampleCount.
+        // Ratio = New / Old.
+        // But wait, look at loopSampleMult (Line 173). It is not explicitly multiplied by distMult.
+        // It is multiplied by (1/sampleCount).
+        // This implies the integral is `Sum(Sample * 1/N)`.
+        // This is an average, NOT an integral, unless `vlMult` accounts for Length?
+        // Line 79 `vlMult *= 0.08`.
+        // Actually, normally VL is `Sum(Density * StepSize)`.
+        // If code uses `Avg * Factor`, then `Factor` must represent `Length`.
+        // If we shorten the length but keep `sampleCount`, `StepSize` decreases.
+        // If we average samples over a shorter distance, the result is the average density of that slice.
+        // BUT the total light should be `AvgDensity * Length`.
+        // So I must scale the result by `NewLength / OriginalLength`.
+        // `OriginalLength` is `maxDist` (roughly).
+        // `NewLength` is `maxCurrentDist - addition`.
+        // Apply range scale to vlMult to ensure correct integrated density
+        vlMult *= max(0.0, maxCurrentDist - addition) / max(0.001, originalMaxDist);
+
     #else
         float maxCurrentDist = min(depth1, far);
     #endif

@@ -1,15 +1,15 @@
 /*
 const int colortex0Format = R11F_G11F_B10F; //main color
 const int colortex1Format = R32F;           //previous depth
-const int colortex2Format = RGB16F;         //taa
+const int colortex2Format = RGBA16F;        //taa + exposure in alpha
 const int colortex3Format = RGBA8;          //(cloud/water map on deferred/gbuffer) | translucentMult & bloom & final color
 const int colortex4Format = R8;             //volumetric cloud linear depth & volumetric light factor
 const int colortex5Format = RGBA8_SNORM;    //normalM & scene image for water reflections
 const int colortex6Format = RGBA8;          //smoothnessD & materialMask & skyLightFactor
 const int colortex7Format = RGBA16F;        //(cloud/water map on gbuffer) | temporal filter
 const int colortex8Format = RGBA8;          //smoothnessD & materialMask & skyLightFactor
-const int colortex9Format = RGBA16F;        //pathtraced colored emissives & occlusion
-const int colortex10Format = RGBA8; 
+const int colortex9Format = RGBA16F;        //physical sky buffer (raymarched atmosphere)
+const int colortex10Format = RGBA16F; 
 const int colortex11Format = RGBA16F;       //global illumination
 const int colortex12Format = RGBA16F;       //cloud render (combined blur)
 const int colortex13Format = R32F;          //cloud depth
@@ -30,7 +30,7 @@ const bool colortex10Clear = false;
 const bool colortex11Clear = false;
 const bool colortex12Clear = true;
 const bool colortex13Clear = true;
-const bool colortex14Clear = true;
+const bool colortex14Clear = false; // Cloud temporal history
 const bool colortex15Clear = true;
 //
 const int noiseTextureResolution = 128;

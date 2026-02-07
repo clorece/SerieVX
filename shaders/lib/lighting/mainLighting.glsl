@@ -60,8 +60,16 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
         #endif
     #endif
 
-    float lightmapY2 = pow2(lightmap.y);
-    float lightmapYM = pow(lightmap.y, 4.0);
+    //float lightmapY2 = pow2(lightmap.y);
+    //float lightmapYM = pow(lightmap.y, 4.0);
+    float lightmapY2 = 1.0;
+    float lightmapYM = 1.0;
+
+    #ifdef GBUFFERS_WATER
+        lightmapY2 = pow2(lightmap.y);
+        lightmapYM = pow(lightmap.y, 4.0);
+    #endif
+
     float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
     vec3 lightColorM = lightColor * 2.0 * SUNLIGHT_AMOUNT;
@@ -279,7 +287,9 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
                             }
                         #endif
 
-                        shadowMult *= GetShadow(shadowPos, lViewPos, lightmap.y, offset, leaves);
+                        if (subsurfaceMode == 2) {
+                            shadowMult *= GetShadow(shadowPos, lViewPos, lightmap.y, offset, leaves);
+                        }
                     }
 
                     float shadowSmooth = 16.0;
@@ -568,12 +578,13 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
             lightHighlight *= pow2(moonPhaseInfluence);
         #endif
     #endif
-    vec3 finalDiffuse = (blockLighting + pow2(sceneLighting) + minLighting * 0.7) + pow2(emission);
+    vec3 finalDiffuse = (blockLighting + pow2(sceneLighting) + minLighting * 0.6) + pow2(emission);
     // Mix Colors
     //#ifdef DH_TERRAIN
         //sceneLighting = pow2(sceneLighting) * 7.5 + (nightFactor * 0.02);
+    
     #ifdef DH_TERRAIN
-        finalDiffuse = (blockLighting + sceneLighting) + pow2(emission);
+        finalDiffuse = (blockLighting + pow2(pow2(sceneLighting)) ) + pow2(emission);
     #endif
     
     

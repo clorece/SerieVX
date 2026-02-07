@@ -89,6 +89,7 @@ uniform sampler2D depthtex1;
 uniform sampler2D depthtex2;
 uniform sampler2D gaux1;
 uniform sampler2D gaux2;
+uniform sampler3D gaux3;
 uniform sampler2D gaux4;
 uniform sampler2D normals;
 uniform sampler2D noisetex;

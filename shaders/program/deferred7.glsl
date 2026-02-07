@@ -108,6 +108,7 @@ void main() {
     vec3 nightNebula = vec3(0.0);
     
     #ifdef OVERWORLD
+        fog_precomputedSky = texture2D(colortex9, texCoord * RENDER_SCALE).rgb;
         #if AURORA_STYLE > 0
             auroraBorealis = GetAuroraBorealis(viewPos.xyz, VdotU, dither);
         #endif

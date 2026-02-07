@@ -89,7 +89,7 @@ void main() {
         float VdotS = dot(nViewPos, sunVec);
         float dither = Bayer8(gl_FragCoord.xy);
 
-        color.rgb = GetSky(VdotU, VdotS, dither, true, false);
+        color.rgb = vec3(0.0); // Disable SerieVX Sky Gradient to keep only Stars/Clouds
 
         #ifdef ATM_COLOR_MULTS
             color.rgb *= GetAtmColorMult();
@@ -106,7 +106,7 @@ void main() {
             color.rgb += GetPlanarClouds(viewPos.xyz, VdotU, VdotS, dither);
         #endif 
 
-        #if SUN_MOON_STYLE >= 2
+        #if 0
             float absVdotS = abs(VdotS) * 0.9977;
             float absVdotS2 = abs(VdotS) * 0.9977;
             #if SUN_MOON_STYLE == 2

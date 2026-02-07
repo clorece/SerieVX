@@ -15,7 +15,7 @@ void AddSpecialLightDetail(inout vec3 light, vec3 albedo, float emission) {
 //	vec3 fireSpecialLightColor = vec3(3.05, 0.13, 0.077); //3.05, 0.13, 0.077
 //	vec3 lavaSpecialLightColor = fireSpecialLightColor;
 //#else
-	vec3 fireSpecialLightColor = vec3(1.4, 0.9, 0.4) * 1.5;
+	vec3 fireSpecialLightColor = vec3(1.7, 0.9, 0.4) * 1.5;
 	vec3 lavaSpecialLightColor = vec3(3.0, 0.9, 0.2) * 1.0;
 //#endif
 
@@ -42,9 +42,9 @@ vec4 GetSpecialBlocklightColor(int mat) {
 						if (mat == 2) return vec4(fireSpecialLightColor, 0.0); // Torch
 					//#endif
 					#ifndef END
-						if (mat == 3) return vec4(vec3(1.0, 1.0, 1.0) * 4.0, 0.0); // End Rod - This is the base for all lights. Total value 12
+						if (mat == 3) return vec4(vec3(1.0, 1.0, 1.0) * 0.5, 0.0); // End Rod - This is the base for all lights. Total value 12
 					#else
-						if (mat == 3) return vec4(vec3(1.25, 0.5, 1.25) * 4.0, 0.0); // End Rod in the End dimension
+						if (mat == 3) return vec4(vec3(1.25, 0.5, 1.25) * 0.5, 0.0); // End Rod in the End dimension
 					#endif
 					if (mat == 4) return vec4(vec3(0.7, 1.5, 2.0) * 3.0, 0.0); // Beacon
 					if (mat == 5) return vec4(fireSpecialLightColor, 0.0); // Fire

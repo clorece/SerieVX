@@ -150,9 +150,11 @@ const bool colortex0MipmapEnabled = true;
     #include "/lib/misc/distantLightBokeh.glsl"
 #endif
 
+/*
 #ifdef NETHER
 vec3 ambientColor = vec3(0.5, 0.21, 0.01);
 #endif
+*/
 
 #define MIN_LIGHT_AMOUNT 1.0
 
@@ -244,7 +246,8 @@ vec3 textureCatmullRom(sampler2D colortex, vec2 texcoord, vec2 view) {
 void main() {
 
     vec2 scaledUV = (texCoord) * RENDER_SCALE;
-    
+    vec3 precomputedSky = texture2D(colortex9, scaledUV).rgb;
+
     vec3 color = texture2D(colortex0, scaledUV).rgb;
     float z0 = texture2D(depthtex0, scaledUV).r;
 
@@ -264,8 +267,6 @@ void main() {
     #if defined TAA || defined TEMPORAL_FILTER
         dither = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
         dither2.x = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
-        dither2.y = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
-        dither2.z = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
     #endif
 
     #ifdef ATM_COLOR_MULTS
@@ -280,6 +281,11 @@ void main() {
     vec3 waterRefColor = vec3(0.0);
     vec3 auroraBorealis = vec3(0.0);
     vec3 nightNebula = vec3(0.0);
+
+    // Set precomputed sky for performance
+    #ifdef OVERWORLD
+    fog_precomputedSky = precomputedSky;
+    #endif
 
     #ifdef TEMPORAL_FILTER
         vec4 refToWrite = vec4(0.0);
@@ -438,7 +444,7 @@ void main() {
                     //color = mix(vec3(1,1,0), color, max0(2.0 - linearZDif) * 0.5);
 
                     // Reduce blending if normal changed
-                    vec3 texture5P = texture2D(colortex5, oppositePreCoord, 0).rgb;
+                    vec3 texture5P = texture2D(colortex5, oppositePreCoord).rgb;
                     vec3 texture5Dif = abs(texture5 - texture5P);
                     if (texture5Dif != clamp(texture5Dif, vec3(-0.004), vec3(0.004))) {
                         blendFactor = 0.0;
@@ -489,7 +495,7 @@ void main() {
 
             
             #ifdef PT_VIEW
-                vec3 colorAdd = gi + (emissiveColor * PT_EMISSIVE_I) - rtao;
+                vec3 colorAdd = gi - rtao;
             #else
                 vec3 albedo = color;
                 
@@ -517,7 +523,8 @@ void main() {
                 float pureAdditive = 0.3 * intensityRatio;
                 float albedoMod = 1.0 - pureAdditive;
 
-                vec3 colorAdd = mix(color, (gi * albedo * finalAO) * 1.0, 0.5);
+               vec3 colorAdd = mix(color, (gi * albedo * finalAO) * 1.0, 0.5);
+               //vec3 colorAdd = (gi * albedo * finalAO) * 0.5 + color * 0.5;
                 //vec3 colorAdd = color * 0.5 + (gi * albedo * finalAO) + emissiveColor * PT_EMISSIVE_I;
                 
                 //colorAdd += (emissiveColor * albedo * albedoMod) * PT_EMISSIVE_I;
@@ -563,6 +570,7 @@ void main() {
 
                 vec4 newRef = vec4(colorAdd, colorMultInv);
                 vec2 oppositePreCoord = scaledUV - 2.0 * (prvCoord - scaledUV);
+                
                 
 
                 // Reduce blending if depth changed
@@ -644,6 +652,13 @@ void main() {
         skyFade = 1.0;
 
         #ifdef OVERWORLD
+            vec3 roboboSky = precomputedSky;
+            color.rgb += roboboSky;
+
+            vec3 viewPosition = (PLANET_RADIUS + eyeAltitude) * upVec;
+            vec3 transmittance = GetAtmosphereTransmittance(viewPosition, nViewPos, 16.0);
+            color.rgb += GetSunAndMoon(nViewPos, sunVec, -sunVec, upVec, transmittance);
+
             #if AURORA_STYLE > 0
                 auroraBorealis = GetAuroraBorealis(viewPos.xyz, VdotU, dither);
                 color.rgb += auroraBorealis;
@@ -681,7 +696,7 @@ void main() {
     vec4 clouds = vec4(0.0);
 
     #ifdef VL_CLOUDS_ACTIVE
-        // Read the filtered clouds from colortex14 (output of deferred6)
+        // Read the temporally filtered clouds from colortex14 (output of deferred8)
         clouds = texture2D(colortex14, texCoord);
         
         // Read cloud depth from colortex13 (written by deferred5)

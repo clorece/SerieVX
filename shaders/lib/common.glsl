@@ -29,6 +29,7 @@
     #define CLOUD_QUALITY 3 //[0 1 2 3]
     #define LIGHTSHAFT_QUALI_DEFINE 1 //[0 1 2 3 4]
     #define WATER_REFLECT_QUALITY 2 //[-1 0 1 2]
+    //#define WORLDSPACE_REFLECTIONS
     #define SKY_EFFECT_REFLECTION
     #define BLOCK_REFLECT_QUALITY 2 //[0 1 2]
     #define ANISOTROPIC_FILTER 4 //[0 4 8 16]
@@ -54,7 +55,7 @@
     #endif
         #define BLUR_SAMPLES 2 //[1 2 3 4]
         #define BLUR_AMOUNT 1.0 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 3.0]
-        #define BLEND_WEIGHT 0.0035 //[0.0001 0.00015 0.0002 0.00025 0.0003 0.00035 0.0004 0.00045 0.0005 0.0006 0.00065 0.0007 0.00075 0.0008 0.00085 0.0009 0.00095 0.001 0.0015 0.002 0.0025 0.003 0.0035 0.004 0.0045 0.005 0.006 0.007 0.008 0.009 0.01 0.015 0.02 0.025 0.03 0.035 0.04 0.045 0.05 0.06 0.07 0.08 0.09 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.6 0.7 0.8 0.9 1.0]
+        #define BLEND_WEIGHT 0.005 //[0.0001 0.00015 0.0002 0.00025 0.0003 0.00035 0.0004 0.00045 0.0005 0.0006 0.00065 0.0007 0.00075 0.0008 0.00085 0.0009 0.00095 0.001 0.0015 0.002 0.0025 0.003 0.0035 0.004 0.0045 0.005 0.006 0.007 0.008 0.009 0.01 0.015 0.02 0.025 0.03 0.035 0.04 0.045 0.05 0.06 0.07 0.08 0.09 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.6 0.7 0.8 0.9 1.0]
         #define GHOST_REDUCTION 0.0 //[0.0 1.0 2.0 4.0 6.0 8.0 10.0 12.0 16.0 24.0 32.0 48.0 64.0 92.0 128.0]
 
 
@@ -75,7 +76,7 @@
 
         #if COLORED_LIGHTING > 0
             #define COLORED_LIGHT_FOG
-            #define COLORED_LIGHT_FOG_I 0.75 //[0.15 0.20 0.25 0.30 0.35 0.40 0.45 0.50 0.55 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 1.00 1.05 1.10 1.15 1.20 1.25 1.30 1.35 1.40 1.45 1.50]
+            #define COLORED_LIGHT_FOG_I 1.0 //[0.15 0.20 0.25 0.30 0.35 0.40 0.45 0.50 0.55 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 1.00 1.05 1.10 1.15 1.20 1.25 1.30 1.35 1.40 1.45 1.50]
             
             #define PORTAL_EDGE_EFFECT
             #ifndef IRIS_HAS_CONNECTED_TEXTURES
@@ -125,8 +126,22 @@
     #define SUN_MOON_DURING_RAIN
     #define NIGHT_STAR_AMOUNT 2 //[2 3]
     #define RAINBOWS 1 //[0 1 3]
-    #define CLOUD_STYLE_DEFINE 2 //[-1 0 1 3 50]
-    #define CLOUD_SHADOWS
+    
+    // Atmospheric Scattering Style
+    #define SKY_SCATTERING_STYLE 1 //[0 1] // 0=Original SerieVX, 1=Stylized Atmospheric Scattering
+    
+    // Physical Sky Settings (used when SKY_SCATTERING_STYLE = 1)
+    #define PHYSICAL_SKY                              // Enable physically-based atmospheric scattering
+    #define PHYSICAL_SKY_QUALITY 1 //[0 1 2]         // 0=Low (8 steps), 1=Medium (16 steps), 2=High (32 steps)
+    #define PHYSICAL_SKY_BUFFER_SCALE 0.5 //[0.25 0.5 0.75 1.0] // Resolution scale for sky buffer (lower = faster)
+    #define PHYSICAL_SKY_SUN_INTENSITY 40.0 //[5.0 10.0 15.0 20.0 25.0 30.0 40.0 50.0]
+    #define PHYSICAL_SKY_MIE_G 0.76 //[0.5 0.6 0.7 0.76 0.8 0.85 0.9] // Mie anisotropy (higher = sharper sun glow)
+    #define PHYSICAL_SKY_RAYLEIGH_MULT 1.0 //[0.5 0.75 1.0 1.25 1.5 2.0] // Rayleigh scattering multiplier
+    #define PHYSICAL_SKY_MIE_MULT 1.0 //[0.5 0.75 1.0 1.25 1.5 2.0 3.0] // Mie scattering multiplier
+    #define PHYSICAL_SKY_OZONE 1.0 //[0.0 0.5 0.75 1.0 1.25 1.5 2.0] // Ozone absorption intensity
+    
+    #define CLOUD_STYLE_DEFINE 1 //[1 2]
+    //#define CLOUD_SHADOWS
     #define CLOUD_CLOSED_AREA_CHECK
     #define CLOUD_SPEED_MULT 100 //[0 5 7 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 105 110 120 130 140 150 160 170 180 190 200 220 240 260 280 300 325 350 375 400 425 450 475 500 550 600 650 700 750 800 850 900]
     #define CLOUD_R 100 //[25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 110 120 130 140 150 160 170 180 190 200 220 240 260 280 300]
@@ -148,9 +163,9 @@
     #define NETHER_STORM_I 1.0 //[0.05 0.06 0.07 0.08 0.09 0.10 0.12 0.14 0.16 0.18 0.22 0.26 0.30 0.35 0.40 0.45 0.50 0.55 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 1.00 1.05 1.10 1.15 1.20 1.25 1.30 1.35 1.40 1.45 1.50]
 
     #define BORDER_FOG
-    #define ATM_FOG_MULT 0.75 //[0.50 0.65 0.75 0.80 0.95]
-    #define ATM_FOG_DISTANCE 60 //[10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 110 120 130 140 150 160 170 180 190 200 220 240 260 280 300]
-    #define ATM_FOG_ALTITUDE 60 //[0 5 10 15 20 25 30 35 40 45 50 52 54 56 58 60 61 62 63 64 65 66 67 68 69 70 72 74 76 78 80 85 90 95 100 105 110 115 120 125 130 135 140 145 150 155 160 165 170 175 180 185 190 195 200 210 220 230 240 250 260 270 280 290 300]
+    #define ATM_FOG_MULT 0.80 //[0.50 0.65 0.75 0.80 0.95]
+    #define ATM_FOG_DISTANCE 200 //[10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 110 120 130 140 150 160 170 180 190 200 220 240 260 280 300]
+    #define ATM_FOG_ALTITUDE 100 //[0 5 10 15 20 25 30 35 40 45 50 52 54 56 58 60 61 62 63 64 65 66 67 68 69 70 72 74 76 78 80 85 90 95 100 105 110 115 120 125 130 135 140 145 150 155 160 165 170 175 180 185 190 195 200 210 220 230 240 250 260 270 280 290 300]
     #define CAVE_FOG
     #define LIGHTSHAFT_BEHAVIOUR 1 //[0 1 2 3]
     #define LIGHTSHAFT_DAY_I 100 //[1 3 5 7 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 110 120 130 140 150 160 170 180 190 200]
@@ -170,6 +185,7 @@
     #define LENSFLARE_MODE 0 //[0 1 2]
     #define LENSFLARE_I 1.00 //[0.05 0.10 0.15 0.20 0.25 0.30 0.35 0.40 0.45 0.50 0.55 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 1.00 1.10 1.20 1.30 1.40 1.50 1.60 1.70 1.80 1.90 2.00 2.20 2.40 2.60 2.80 3.00 3.25 3.50 3.75 4.00 4.25 4.50 4.75 5.00]
     #define TAA_MODE 2 //[1 2 0]
+    #define AUTO_EXPOSURE // Enable automatic exposure adjustment
     #define DISTANT_LIGHT_BOKEH
 
     #define WORLD_BLUR 0 //[0 1 2]
@@ -243,7 +259,7 @@
 
     #define SPECIAL_PORTAL_EFFECTS
 
-    #define SUN_ANGLE -40 //[0 -20 -30 -40 -50 -60 60 50 40 30 20]
+    #define SUN_ANGLE -50 //[0 -20 -30 -40 -50 -60 -70 -80 80 70 60 50 40 30 20]
 
     #define SELECT_OUTLINE 1 //[0 1 3 4 2]
     //#define SELECT_OUTLINE_AUTO_HIDE
@@ -471,6 +487,10 @@
             const float sunPathRotation = 50.0;
         #elif SUN_ANGLE == 60
             const float sunPathRotation = 60.0;
+        #elif SUN_ANGLE == 70
+            const float sunPathRotation = 70.0;
+        #elif SUN_ANGLE == 80
+            const float sunPathRotation = 80.0;
         #elif SUN_ANGLE == -20
             const float sunPathRotation = -20.0;
         #elif SUN_ANGLE == -30
@@ -481,6 +501,10 @@
             const float sunPathRotation = -50.0;
         #elif SUN_ANGLE == -60
             const float sunPathRotation = -60.0;
+        #elif SUN_ANGLE == -70
+            const float sunPathRotation = -70.0;
+        #elif SUN_ANGLE == -80
+            const float sunPathRotation = -80.0;
         #endif
     #endif
 
@@ -546,11 +570,19 @@
     #ifdef OVERWORLD
         #if CLOUD_STYLE > 0 && CLOUD_STYLE != 50 && CLOUD_QUALITY > 0
             #define VL_CLOUDS_ACTIVE
-            #if CLOUD_STYLE == 1
-                #define CLOUDS_REIMAGINED
-            #endif
-            #if CLOUD_STYLE == 3
-                #define CLOUDS_UNBOUND
+            
+            #if CUMULUS && CLOUD_STYLE_DEFINE == CLOUD_STYLE_DEFAULT
+                 #define CLOUDS_SERIE
+            #else
+                #if CLOUD_STYLE == 1
+                    #define CLOUDS_REIMAGINED
+                #endif
+                #if CLOUD_STYLE == 2
+                    #define CLOUDS_SERIE
+                #endif
+                #if CLOUD_STYLE == 3
+                    #define CLOUDS_UNBOUND
+                #endif
             #endif
         #endif
     #else

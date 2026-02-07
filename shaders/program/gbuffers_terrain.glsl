@@ -469,9 +469,8 @@ void main() {
     #if defined TAA
         gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
     #endif
-    
-    
-    #if defined TAA
+
+     #if defined TAA
         gl_Position.xy = TAAJitter(gl_Position.xy, gl_Position.w);
     #endif
 

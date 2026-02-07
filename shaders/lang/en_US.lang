@@ -364,12 +364,9 @@ option.LIGHTSHAFT_NIGHT_I=Light Shaft Night Multiplier
 option.LIGHTSHAFT_RAIN_I=Light Shaft Rain Multiplier
 
 option.CLOUD_STYLE_DEFINE=Cloud Style
-option.CLOUD_STYLE_DEFINE.comment=Determines the style of clouds. §e[*]§r "Set by Style" means that the setting will be automatically determined by the "Visual Style" setting in the main menu of Shader Options. §e[*]§r The "Vanilla" style requires clouds to be enabled in Video Settings.
-value.CLOUD_STYLE_DEFINE.-1=Set by Style
-value.CLOUD_STYLE_DEFINE.0=§cOFF
+option.CLOUD_STYLE_DEFINE.comment=Determines the style of clouds. Reimagined: Complementary's blocky clouds (Fastest). Serie: Allium's cumulus clouds (Slowest).
 value.CLOUD_STYLE_DEFINE.1=Reimagined
-value.CLOUD_STYLE_DEFINE.3=Unbound
-value.CLOUD_STYLE_DEFINE.50=Vanilla §e[*]
+value.CLOUD_STYLE_DEFINE.2=Serie
 
 option.CLOUD_SHADOWS=Cloud Shadows
 option.CLOUD_SHADOWS.comment=Enables shadows that are cast from the clouds. This option will also allow for lightshafts to cast rays from the clouds in the atmosphere. Extremely performance intensive!
@@ -575,6 +572,38 @@ option.NIGHT_STAR_AMOUNT=Night Star Amount
 option.NIGHT_STAR_AMOUNT.comment=Determines the amount of stars in the night sky.
 value.NIGHT_STAR_AMOUNT.2=Medium
 value.NIGHT_STAR_AMOUNT.3=High
+
+screen.PHYSICAL_SKY_SETTINGS=Physical Sky
+screen.PHYSICAL_SKY_SETTINGS.comment=Settings for physically-based atmospheric scattering using raymarching.
+
+option.PHYSICAL_SKY=Physical Sky
+option.PHYSICAL_SKY.comment=Enable physically-based atmospheric scattering with Rayleigh and Mie scattering. Uses raymarching for accurate simulation. §c[-]§r May impact performance.
+
+option.PHYSICAL_SKY_QUALITY=Physical Sky Quality
+option.PHYSICAL_SKY_QUALITY.comment=Adjusts the number of raymarching steps for atmospheric scattering. Higher values are more accurate but slower.
+value.PHYSICAL_SKY_QUALITY.0=§aLow (8 steps)
+value.PHYSICAL_SKY_QUALITY.1=§eMedium (16 steps)
+value.PHYSICAL_SKY_QUALITY.2=§cHigh (32 steps)
+
+option.PHYSICAL_SKY_SUN_INTENSITY=Sun Intensity
+option.PHYSICAL_SKY_SUN_INTENSITY.comment=Adjusts the intensity of sun illumination for the physical atmosphere.
+
+option.PHYSICAL_SKY_MIE_G=Mie Anisotropy
+option.PHYSICAL_SKY_MIE_G.comment=Controls the directionality of Mie scattering (aerosol/haze). Higher values create a tighter sun glow, lower values spread it out.
+
+option.PHYSICAL_SKY_RAYLEIGH_MULT=Rayleigh Multiplier
+option.PHYSICAL_SKY_RAYLEIGH_MULT.comment=Adjusts the strength of Rayleigh scattering (sky blue color). Higher values create a deeper blue sky.
+
+option.PHYSICAL_SKY_MIE_MULT=Mie Multiplier
+option.PHYSICAL_SKY_MIE_MULT.comment=Adjusts the strength of Mie scattering (haze/glow around the sun). Higher values create more atmospheric haze.
+
+option.PHYSICAL_SKY_OZONE=Ozone Absorption
+option.PHYSICAL_SKY_OZONE.comment=Enable ozone layer absorption which adds deeper sunset/sunrise colors.
+
+option.SKY_SCATTERING_STYLE=Sky Scattering Style
+option.SKY_SCATTERING_STYLE.comment=Determines the atmospheric scattering model used for the sky. §bOriginal§r: Classic SerieVX gradient-based sky. §eStylized Scattering§r: Shadertoy-inspired atmospheric scattering with Mie scattering for sun/moon glow, smooth day/night transitions, and enhanced night sky with moon contribution.
+value.SKY_SCATTERING_STYLE.0=§bOriginal SerieVX
+value.SKY_SCATTERING_STYLE.1=§eStylized Scattering
 
 option.RAINBOWS=Rainbows
 option.RAINBOWS.comment=Enables rainbows that appear at the opposite side of the sun during the morning/evening.

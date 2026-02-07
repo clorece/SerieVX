@@ -3,7 +3,7 @@
 
 SerieVX is a reimagination of Allium that focuses on gameplay while having Voxel Path Tracing features, such as worldspace global illumination and colored lights. Serie has taken a huge inspiration from Soft Voxels and VXFluff with the softly lit appearance.
 
-### This shader is best experienced with Distant Horizons turned on and Render Distance set to 8 chunks. Please match Voxel Distance to your Minecraft Render Distance.
+### This shader is compatible with Distant Horizons, but it is not required.
 
 ### Huge Thanks
 - Emin for using Complementary as the base shader

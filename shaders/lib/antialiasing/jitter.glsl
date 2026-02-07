@@ -1,3 +1,6 @@
+#ifndef JITTER_GLSL
+#define JITTER_GLSL
+
 // Jitter offset from Chocapic13
 vec2 jitterOffsets[8] = vec2[8](
                         vec2( 0.125,-0.375),
@@ -10,13 +13,17 @@ vec2 jitterOffsets[8] = vec2[8](
                         vec2( 0.875, 0.875)
                         );
 vec2 TAAJitter(vec2 coord, float w) {
-    vec2 outputSize = vec2(viewWidth, viewHeight) * RENDER_SCALE;
-    vec2 offset = jitterOffsets[int(framemod8)] * (w / outputSize);
+        vec2 outputSize = vec2(viewWidth, viewHeight) * RENDER_SCALE;
+        vec2 offset = jitterOffsets[int(framemod8)] * (w / outputSize);
 
-    #if TAA_MODE == 1
-        offset *= 0.25;
-    #endif
+        #if TAA_MODE == 1
+            offset *= 0.1;
+        #else
+            offset *= 0.25;
+        #endif
 
-    return coord + offset;
+        return coord + offset;
     
 }
+
+#endif

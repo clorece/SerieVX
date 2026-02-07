@@ -2,7 +2,7 @@
     #define INCLUDE_LIGHT_AND_AMBIENT_COLORS
 
         #ifndef COMPOSITE //ground and cloud color
-            vec3 noonClearLightColor = vec3(0.95, 0.87, 0.79);
+            vec3 noonClearLightColor = vec3(0.95, 0.81, 0.72);
 
 
 
@@ -13,12 +13,12 @@
 
         // noonAmbientColor
         //vec3 noonClearAmbientColor = pow(skyColor, vec3(0.65)) * 0.85;
-        vec3 noonClearAmbientColor = vec3(0.68, 0.73, 0.78);
+        vec3 noonClearAmbientColor = vec3(0.63, 0.68, 0.78);
 
 
 
         #ifndef COMPOSITE //ground and cloud color
-            vec3 sunsetClearLightColor = pow(vec3(0.65, 0.53, 0.38) * 0.85, vec3(1.5 + invNoonFactor)) * 3.0;
+            vec3 sunsetClearLightColor = pow(vec3(0.75, 0.53, 0.38) * 0.85, vec3(1.5 + invNoonFactor)) * 3.0;
 
 
 
@@ -29,7 +29,7 @@
 
 
         // sunset ambient
-        vec3 sunsetClearAmbientColor   = vec3(0.68, 0.73, 0.78) * 0.65;
+        vec3 sunsetClearAmbientColor   = vec3(0.63, 0.68, 0.78) * 0.65;
 
 
         #if !defined COMPOSITE && !defined DEFERRED7 //ground color

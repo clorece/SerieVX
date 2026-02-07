@@ -115,5 +115,6 @@ vec3 GetNightNebula(vec3 viewPos, float VdotU, float VdotS) {
     #endif
 
     vec3 finalColor = baseColor * brightness + planetStars;
-    return finalColor * nightFactor;
+    finalColor = max(finalColor, vec3(0.0));
+    return finalColor * nightFactor * (1.0 - rainFactor);
 }

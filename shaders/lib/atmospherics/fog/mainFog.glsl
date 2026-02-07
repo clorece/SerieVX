@@ -1,4 +1,9 @@
 
+#ifndef MAIN_FOG_GLSL
+#define MAIN_FOG_GLSL
+
+// Global optimization variable - set this before calling DoFog if you have a precomputed sky
+vec3 fog_precomputedSky = vec3(-1.0);
 
 #ifdef ATM_COLOR_MULTS
     #include "/lib/colors/colorMultipliers.glsl"
@@ -48,7 +53,12 @@
             fog = clamp(fog, 0.0, 1.0);
 
             #ifdef OVERWORLD
-                vec3 fogColorM = GetSky(VdotU, VdotS, dither, true, false);
+                vec3 fogColorM;
+                if (fog_precomputedSky.r >= 0.0) {
+                    fogColorM = fog_precomputedSky;
+                } else {
+                    fogColorM = GetSky(VdotU, VdotS, dither, true, false);
+                }
             #elif defined NETHER
                 vec3 fogColorM = netherColor;
             #else
@@ -126,8 +136,7 @@
             float renDisFactor = min1(192.0 / renderDistance);
 
             #if ATM_FOG_DISTANCE != 100
-                #define ATM_FOG_DISTANCE_M 100.0 / ATM_FOG_DISTANCE;
-                renDisFactor *= ATM_FOG_DISTANCE_M;
+                renDisFactor *= 100.0 / ATM_FOG_DISTANCE;
             #endif
 
             float fog = 1.0 - exp(-pow(lViewPos * (0.001 - 0.0007 * rainFactor), 2.0 - rainFactor2) * lViewPos * renDisFactor);
@@ -181,8 +190,21 @@
             fog = clamp(fog, 0.0, 1.0);
 
             #ifdef OVERWORLD
-                //ec3 fogColorM = GetAtmFogColor(altitudeFactorRaw, VdotS);
-                vec3 fogColorM = GetSky(VdotU, VdotS, dither, true, false);
+                //vec3 fogColorM = GetAtmFogColor(altitudeFactorRaw, VdotS);
+                //vec3 fogColorM = GetSky(VdotU, VdotS, dither, true, false);
+                
+                
+                
+                vec3 fogColorM;
+                if (fog_precomputedSky.r >= 0.0) {
+                    fogColorM = fog_precomputedSky;
+                } else {
+                    fogColorM = GetSky(max(VdotU, 0.0), VdotS, dither, false, false);
+                }
+                //fogColorM -= invNightFactor;
+                fogColorM = mix(fogColorM, lightColor * 0.5, 0.5);
+                
+                
             #else
                 vec3 fogColorM = endSkyColor * 1.5;
             #endif
@@ -250,8 +272,9 @@ void DoDarknessFog(inout vec3 color, float lViewPos) {
 }
 
 void DoFog(inout vec3 color, inout float skyFade, float lViewPos, vec3 playerPos, float VdotU, float VdotS, float dither) {
+    
     #ifdef CAVE_FOG
-        DoCaveFog(color, lViewPos);
+      DoCaveFog(color, lViewPos);
     #endif
     #ifdef ATMOSPHERIC_FOG
         DoAtmosphericFog(color, playerPos, lViewPos, VdotU, VdotS, dither);
@@ -259,7 +282,7 @@ void DoFog(inout vec3 color, inout float skyFade, float lViewPos, vec3 playerPos
     #ifdef BORDER_FOG
         DoBorderFog(color, skyFade, max(length(playerPos.xz), abs(playerPos.y)), VdotU, VdotS, dither);
     #endif
-
+    
     vec3 worldPos = playerPos + cameraPosition;
     if (isEyeInWater == 1) DoWaterFog(color, lViewPos);
     else if (isEyeInWater == 2) DoLavaFog(color, lViewPos);
@@ -268,3 +291,5 @@ void DoFog(inout vec3 color, inout float skyFade, float lViewPos, vec3 playerPos
     if (blindness > 0.00001) DoBlindnessFog(color, lViewPos);
     if (darknessFactor > 0.00001) DoDarknessFog(color, lViewPos);
 }
+
+#endif // MAIN_FOG_GLSL

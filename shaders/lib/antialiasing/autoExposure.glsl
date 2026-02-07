@@ -1,7 +1,7 @@
-#define AUTO_EXPOSURE_SPEED 0.5      
+#define AUTO_EXPOSURE_SPEED 0.1      
 #define AUTO_EXPOSURE_MIN 0.4      
-#define AUTO_EXPOSURE_MAX 4.0        
-#define AUTO_EXPOSURE_TARGET 0.18    // default is 0.25
+#define AUTO_EXPOSURE_MAX 32.0        
+#define AUTO_EXPOSURE_TARGET 0.1    // default is 0.25
 #define AUTO_EXPOSURE_BIAS 0.0       // [-1.0, 1.0]
 #define AUTO_EXPOSURE_THRESHOLD 50.0 
 
@@ -20,7 +20,7 @@ float GetSceneLuminanceHistogram(sampler2D colorTex, float dither) {
         float totalLuminance = 0.0;
         float totalWeight = 0.0;
         
-        const int samples = 6;
+        const int samples = 3;
         for (int x = 0; x < samples; x++) {
             for (int y = 0; y < samples; y++) {
                 vec2 offset = (vec2(float(x), float(y)) + 0.5) / float(samples);

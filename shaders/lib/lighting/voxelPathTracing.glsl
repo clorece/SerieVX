@@ -43,17 +43,12 @@ vec3 SampleHemisphereCosine(vec2 Xi) {
 }
 
 void BuildOrthonormalBasis(vec3 normal, out vec3 tangent, out vec3 bitangent) {
-    if (normal.z < -0.9999999) {
-        tangent = vec3(0.0, -1.0, 0.0);
-        bitangent = vec3(-1.0, 0.0, 0.0);
-        return;
+    if (abs(normal.y) < 0.999) {
+        tangent = normalize(cross(vec3(0.0, 1.0, 0.0), normal));
+    } else {
+        tangent = normalize(cross(vec3(1.0, 0.0, 0.0), normal));
     }
-    
-    float a = 1.0 / (1.0 + normal.z);
-    float b = -normal.x * normal.y * a;
-    
-    tangent = vec3(1.0 - normal.x * normal.x * a, b, -normal.x);
-    bitangent = vec3(b, 1.0 - normal.y * normal.y * a, -normal.y);
+    bitangent = cross(normal, tangent);
 }
 
 vec3 RayDirection(vec3 normal, float dither, int i) {
@@ -69,50 +64,42 @@ vec3 RayDirection(vec3 normal, float dither, int i) {
 }
 
 #if COLORED_LIGHTING_INTERNAL > 0
-    // Sample skylight contribution from voxel volume
-    // Uses the floodfill volume for world-space sky light propagation
     vec3 GetVoxelSkylight(vec3 scenePos, vec3 normal) {
         vec3 voxelPos = SceneToVoxel(scenePos);
         vec3 volumeSize = vec3(voxelVolumeSize);
         
         // Check if inside voxel volume
         if (!CheckInsideVoxelVolume(voxelPos)) {
-            return vec3(1.0); // Full skylight outside volume
+            return vec3(1.0);
         }
-        
-        // Sample from floodfill volume - contains accumulated light
+
         vec3 normalizedPos = voxelPos / volumeSize;
         vec4 lightVolume = GetLightVolume(normalizedPos);
-        
-        // Sample in the direction of the normal for directional skylight
+
         vec3 offsetPos = voxelPos + normal * 2.0;
         offsetPos = clamp(offsetPos, vec3(0.5), volumeSize - 0.5);
         vec3 normalizedOffsetPos = offsetPos / volumeSize;
         vec4 lightVolumeOffset = GetLightVolume(normalizedOffsetPos);
         
         float skyExposure = max(lightVolume.a, lightVolumeOffset.a);
-        
-        // Check for solid blocks above (simple sky occlusion)
+
         vec3 upSamplePos = voxelPos + vec3(0.0, 4.0, 0.0);
         if (all(greaterThan(upSamplePos, vec3(0.5))) && all(lessThan(upSamplePos, volumeSize - 0.5))) {
             uint aboveVoxel = texelFetch(voxel_sampler, ivec3(upSamplePos), 0).r;
             if (aboveVoxel >= 1u && aboveVoxel < 200u) {
-                skyExposure *= 0.3; // Reduce skylight if blocked
+                skyExposure *= 0.3;
             }
         }
         
         return vec3(skyExposure);
     }
     
-    // Calculate ambient occlusion from voxel occupancy data
-    // Samples voxel grid to determine how much geometry surrounds the point
     float GetVoxelAO(vec3 scenePos, vec3 normal, float dither) {
         vec3 voxelPos = SceneToVoxel(scenePos);
         vec3 volumeSize = vec3(voxelVolumeSize);
-        
-        // Check if inside voxel volume
+
         if (!CheckInsideVoxelVolume(voxelPos)) {
-            return 0.0; // No occlusion outside volume
+            return 0.0;
         }
         
         float occlusion = 0.0;
@@ -125,13 +112,11 @@ vec3 RayDirection(vec3 normal, float dither, int i) {
         BuildOrthonormalBasis(normal, tangent, bitangent);
         
         for (int i = 0; i < VOXEL_AO_SAMPLES; i++) {
-            // Generate sample direction in hemisphere
             vec2 Xi = R2Sequence(i, int(dither * 1000.0));
             Xi = CranleyPattersonRotation(Xi, dither);
             vec3 sampleDir = SampleHemisphereCosine(Xi);
             sampleDir = normalize(tangent * sampleDir.x + bitangent * sampleDir.y + normal * sampleDir.z);
-            
-            // Sample along the direction
+
             for (float dist = 1.0; dist <= VOXEL_AO_RADIUS; dist += 1.0) {
                 vec3 samplePos = voxelPos + sampleDir * dist;
                 
@@ -140,11 +125,10 @@ vec3 RayDirection(vec3 normal, float dither, int i) {
                 }
                 
                 uint voxelData = texelFetch(voxel_sampler, ivec3(samplePos), 0).r;
-                
-                // Check if it's a solid block (not air, not light source, not transparent)
+
                 if (voxelData == 1u) {
                     float weight = 1.0 - (dist / VOXEL_AO_RADIUS);
-                    weight = weight * weight; // Quadratic falloff
+                    weight = weight * weight;
                     occlusion += weight;
                     totalWeight += weight;
                     break;
@@ -160,8 +144,7 @@ vec3 RayDirection(vec3 normal, float dither, int i) {
         return clamp(occlusion, 0.0, 1.0);
     }
     
-    // Voxel ray tracing - marches through voxel grid and samples floodfill light
-    // Returns accumulated light along the ray (for colored lighting + skylight)
+
     struct VoxelRayResult {
         bool hitSky;        // Ray escaped to sky
         bool hitSolid;      // Ray hit solid geometry
@@ -179,13 +162,11 @@ vec3 RayDirection(vec3 normal, float dither, int i) {
         vec3 volumeSize = vec3(voxelVolumeSize);
         vec3 voxelPos = SceneToVoxel(scenePos);
         
-        // Check if starting position is inside volume
         if (!CheckInsideVoxelVolume(voxelPos)) {
             result.hitSky = true;
             return result;
         }
         
-        // DDA-style voxel traversal
         vec3 rayDirSign = sign(rayDir);
         vec3 rayDirAbs = abs(rayDir);
         vec3 deltaDist = 1.0 / max(rayDirAbs, vec3(0.0001));
@@ -196,10 +177,10 @@ vec3 RayDirection(vec3 normal, float dither, int i) {
         vec3 sideDist = (rayDirSign * (vec3(mapPos) - voxelPos) + rayDirSign * 0.5 + 0.5) * deltaDist;
         
         float totalLight = 0.0;
-        int maxSteps = int(min(maxDist * 2.0, 64.0));
+        int maxSteps = int(min(maxDist * 1.5, 48.0));
         
         for (int i = 0; i < maxSteps; i++) {
-            // Check bounds
+            // Check bounds check first
             if (any(lessThan(mapPos, ivec3(0))) || any(greaterThanEqual(mapPos, ivec3(volumeSize)))) {
                 result.hitSky = true;
                 break;
@@ -213,10 +194,9 @@ vec3 RayDirection(vec3 normal, float dither, int i) {
                 break;
             }
             
-            // Sample light from floodfill at this position
             vec3 normalizedPos = (vec3(mapPos) + 0.5) / volumeSize;
             vec4 lightSample = GetLightVolume(normalizedPos);
-            result.light += lightSample.rgb * 0.1; // Accumulate with falloff
+            result.light += lightSample.rgb * 0.1; 
             
             // DDA step
             if (sideDist.x < sideDist.y) {
@@ -285,7 +265,6 @@ vec3 RayDirection(vec3 normal, float dither, int i) {
             return result;
         }
         
-        // DDA Setup
         vec3 rayDirSign = sign(rayDir);
         vec3 rayDirAbs = abs(rayDir);
         vec3 deltaDist = 1.0 / max(rayDirAbs, vec3(0.0001));
@@ -295,40 +274,33 @@ vec3 RayDirection(vec3 normal, float dither, int i) {
         
         vec3 sideDist = (rayDirSign * (vec3(mapPos) - voxelPos) + rayDirSign * 0.5 + 0.5) * deltaDist;
         
-        int maxSteps = int(min(maxDist, 256.0));
+        int maxSteps = int(min(maxDist, 128.0));
         vec3 mask = vec3(0.0);
         
         for (int i = 0; i < maxSteps; i++) {
-            // Check bounds
             if (any(lessThan(mapPos, ivec3(0))) || any(greaterThanEqual(mapPos, ivec3(volumeSize)))) {
                 break;
             }
             
             uint voxelData = texelFetch(voxel_sampler, mapPos, 0).r;
-            
-            // Hit any non-air block
+
             if (voxelData > 0u) {
                 result.hit = true;
                 result.voxelID = voxelData;
-                
-                // Calculate exact hit position
-                // The hit normal is -step * mask.
                 result.hitNormal = -vec3(step) * mask;
                 
-                // Recalculate distance based on the axis we hit
+
                 float dist = 0.0;
                 if (mask.x > 0.5) dist = (sideDist.x - deltaDist.x);
                 else if (mask.y > 0.5) dist = (sideDist.y - deltaDist.y);
                 else dist = (sideDist.z - deltaDist.z);
                 
                 result.hitPos = scenePos + rayDir * dist;
-                // Nudge slightly out to avoid self-intersection
                 result.hitPos += result.hitNormal * 0.001;
                 
                 break;
             }
             
-            // DDA step
             mask = vec3(0.0);
             if (sideDist.x < sideDist.y) {
                 if (sideDist.x < sideDist.z) {
@@ -354,6 +326,54 @@ vec3 RayDirection(vec3 normal, float dither, int i) {
         }
         
         return result;
+    }
+
+    bool TraceVoxelShadow(vec3 scenePos, vec3 rayDir, float maxDist, out vec3 absorption) {
+        absorption = vec3(1.0);
+        
+        vec3 volumeSize = vec3(voxelVolumeSize);
+        vec3 voxelPos = SceneToVoxel(scenePos);
+        
+        if (!CheckInsideVoxelVolume(voxelPos)) {
+            return false;
+        }
+        
+        vec3 stepSizes = 1.0 / abs(rayDir);
+        vec3 stepDir = sign(rayDir);
+        vec3 nextDist = (stepDir * 0.5 + 0.5 - fract(voxelPos)) / rayDir;
+        
+        ivec3 mapPos = ivec3(floor(voxelPos));
+        int maxSteps = int(min(maxDist, 64.0));
+        
+        for (int i = 0; i < maxSteps; i++) {
+            float closestDist = min(min(nextDist.x, nextDist.y), nextDist.z);
+            vec3 stepAxis = vec3(lessThanEqual(nextDist, vec3(closestDist)));
+            mapPos += ivec3(stepAxis * stepDir);
+            nextDist += stepSizes * stepAxis;
+            
+            if (any(lessThan(mapPos, ivec3(0))) || any(greaterThanEqual(mapPos, ivec3(volumeSize)))) {
+                break;
+            }
+            
+            uint voxelData = texelFetch(voxel_sampler, mapPos, 0).r;
+            
+            // solid block hit
+            if (voxelData == 1u) {
+                return true;
+            }
+            
+            // translucent blocks (glass) - attenuate and continue
+            if (voxelData >= 200u && voxelData <= 218u) {
+                absorption *= 0.85;
+            }
+        }
+        
+        return false;
+    }
+    
+    bool TraceVoxelShadow(vec3 scenePos, vec3 rayDir, float maxDist) {
+        vec3 unused;
+        return TraceVoxelShadow(scenePos, rayDir, maxDist, unused);
     }
 #endif
 

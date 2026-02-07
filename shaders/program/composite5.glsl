@@ -5,11 +5,11 @@
 //Common//
 #include "/lib/common.glsl"
 
-#define OVERWORLD_LUT                8          //[0 1 2 3 4 5 6 7 8 9]
+#define OVERWORLD_LUT                5          //[0 1 2 3 4 5 6 7 8 9]
 #define NETHER_LUT                2          //[0 1 2 3 4 5 6 7 8 9]
 #define END_LUT                 1          //[0 1 2 3 4 5 6 7 8 9]
 
-#define OVERWORLD_LUT_I            0.3          //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
+#define OVERWORLD_LUT_I            1.0          //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
 #define NETHER_LUT_I               1.0          //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
 #define END_LUT_I                  1.0          //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
 
@@ -86,7 +86,7 @@ void DoBSLColorSaturation(inout vec3 color) {
 
 
 vec3 Tonemap_ACES(vec3 color) {
-    color *= TONEMAP_EXPOSURE * (10.0 / TONEMAP_WHITE_POINT); // Scale factor to match original 0.35 at default 2.0
+    color *= TONEMAP_EXPOSURE * 1.2 * (10.0 / TONEMAP_WHITE_POINT); // Scale factor to match original 0.35 at default 2.0
 
     const mat3 m1 = mat3(
         0.59719, 0.07600, 0.02840,
@@ -106,7 +106,7 @@ vec3 Tonemap_ACES(vec3 color) {
 
     // Apply unified saturation
     float lum = dot(tonemapped, vec3(0.2126, 0.7152, 0.0722));
-    tonemapped = mix(vec3(lum), tonemapped, TONEMAP_SATURATION);
+    tonemapped = mix(vec3(lum), tonemapped, TONEMAP_SATURATION * 1.1);
 
     // Apply unified contrast
     tonemapped = mix(vec3(0.5), tonemapped, TONEMAP_CONTRAST * 0.999);
@@ -403,15 +403,13 @@ void LookupTable(inout vec3 color) {
 
 #include "/lib/antialiasing/autoExposure.glsl"
 
+#ifdef TAA
+    #include "/lib/antialiasing/jitter.glsl"
+#endif 
+
 //Program//
 void main() {
-    /*#if defined TAA
-        vec2 scaledUV = (texCoord) * RENDER_SCALE;
-        
-        vec3 color = texture2D(colortex0, scaledUV).rgb;
-    #else*/
-        vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
-    //=#endif
+    vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
 
     // Normalized pixel coordinates (from 0 to 1)
     vec2 uv = texCoord * view;
@@ -473,13 +471,13 @@ void main() {
     float desaturated = dot(color, vec3(0.15, 0.50, 0.35));
     //color = mix(color, vec3(ignored), exp2((-192) * desaturated));
 
-     // Get auto exposure value (reads from colortex4)
+    // Get auto exposure value (reads from colortex4)
     //float exposure = GetAutoExposure(colortex0, dither);
     
     // Apply exposure
-    //#ifdef OVERWORLD
+   // #ifdef OVERWORLD
     //    color = ApplyExposure(color, exposure);
-    //#endif
+   // #endif
 
     // Apply selected tonemapper
     #if TONEMAP_OPERATOR == 0
@@ -529,7 +527,6 @@ void main() {
 
     /* DRAWBUFFERS:3 */
     gl_FragData[0] = vec4(color, 1.0);
-
     //if (gl_FragCoord.x < 0.5 && gl_FragCoord.y < 0.5) {
     //    /* DRAWBUFFERS:34 */
     //    gl_FragData[1] = vec4(0.0, exposure, 0.0, 1.0);
@@ -547,13 +544,8 @@ noperspective out vec2 texCoord;
     flat out vec3 upVec, sunVec;
 #endif
 
-//Attributes//
-
-//Common Variables//
-
-//Common Functions//
-
 //Includes//
+#include "/lib/antialiasing/autoExposure.glsl"
 
 //Program//
 void main() {
@@ -565,6 +557,7 @@ void main() {
         upVec = normalize(gbufferModelView[1].xyz);
         sunVec = GetSunVector();
     #endif
+    
 }
 
 #endif

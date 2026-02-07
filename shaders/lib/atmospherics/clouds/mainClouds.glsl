@@ -2,7 +2,9 @@
 #define MAIN_CLOUDS
 
 #ifndef CLOUDS_REIMAGINED
-    #define CLOUDS_REIMAGINED
+    #if !defined(CLOUDS_SERIE) && !defined(CLOUDS_UNBOUND)
+        #define CLOUDS_REIMAGINED
+    #endif
 #endif
 #ifndef CLOUD_ALT1
     #define CLOUD_ALT1 150 // [60 300]
@@ -64,6 +66,9 @@ float InterleavedGradientNoiseForClouds() {
 #ifdef CLOUDS_REIMAGINED
     #include "/lib/atmospherics/clouds/reimaginedClouds.glsl"
 #endif
+#ifdef CLOUDS_SERIE
+    #include "/lib/atmospherics/clouds/serieClouds.glsl"
+#endif
 #ifdef CLOUDS_UNBOUND
     // #include "/lib/atmospherics/clouds/unboundClouds.glsl"
 #endif
@@ -83,7 +88,9 @@ vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3
     #endif
 
     #ifdef CLOUDS_REIMAGINED
-        cloudAmbientColor *= 1.0 - 0.25 * rainFactor;
+        #ifndef CLOUDS_SERIE
+            cloudAmbientColor *= 1.0 - 0.25 * rainFactor;
+        #endif
     #endif
 
     vec3 cloudColorMult = vec3(1.0);
@@ -93,9 +100,15 @@ vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3
     cloudAmbientColor *= cloudColorMult;
     cloudLightColor *= cloudColorMult;
 
-    #if !defined DOUBLE_REIM_CLOUDS || defined CLOUDS_UNBOUND
-        clouds = GetVolumetricClouds(cloudAlt1i, thresholdF, cloudLinearDepth, skyFade, skyMult0,
-                                        cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither);
+    #if !defined DOUBLE_REIM_CLOUDS || defined CLOUDS_UNBOUND || defined CLOUDS_SERIE
+        #ifdef CLOUDS_SERIE
+            clouds = GetVolumetricClouds(cumulusLayerAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
+                                            cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither,
+                                            CUMULUS_CLOUD_GRANULARITY, CUMULUS_CLOUD_MULT, CUMULUS_CLOUD_SIZE_MULT_M, 2);
+        #else
+            clouds = GetVolumetricClouds(cloudAlt1i, thresholdF, cloudLinearDepth, skyFade, skyMult0,
+                                            cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither);
+        #endif
     #else
         int maxCloudAlt = max(cloudAlt1i, cloudAlt2i);
         int minCloudAlt = min(cloudAlt1i, cloudAlt2i);
@@ -115,6 +128,7 @@ vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3
                                             cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither);
             }
         }
+        clouds = max(clouds, 0.01);
     #endif
 
     #ifdef ATM_COLOR_MULTS

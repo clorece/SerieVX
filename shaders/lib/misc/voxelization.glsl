@@ -318,12 +318,12 @@
                 // Only clear if it's a standard block (ID 1) OR explicitly a transparent/glass block
                 // This preserves Emissive blocks (ID > 1) because their voxelData will not be 1.
                 // It also clears Non-Solid Standard Blocks (Fences, Bars, Stairs) to prevent shadows.
-                if ((mat >= 30000 &&  mat != 30020) // Water, Glass, Transparents - Always Clear
+                if (voxelData < 200 && ((mat >= 30000 &&  mat != 30020) // Water, Glass, Transparents - Always Clear
                 ||  (voxelData == 1 && ( // Only clear Standard Blocks if they match exclusion:
                         (mat < 30000 && (mat & 3) == 1) // Fences, Walls, Foliage, Non-full blocks
                      || (mat < 10000) // Block entities
                     ))
-                ) {
+                )) {
                     voxelData = 0;
                 }
                 
