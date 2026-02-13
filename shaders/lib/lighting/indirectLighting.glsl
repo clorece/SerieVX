@@ -342,7 +342,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     vec3 receiverWorldPosBiased = receiverWorldPos + receiverBias;
 
     bool receiverInShadow = GetShadow(receiverWorldPosBiased, cameraPosition);
-    float receiverShadowMask = receiverInShadow ? 0.5 : 0.1;
+    float receiverShadowMask = receiverInShadow ? 0.5 : 0.25;
     float receiverShadowMask2 = receiverInShadow ? 0.1 : 0.1;
     
     vec3 receiverVoxelPos = SceneToVoxel(receiverScenePos);
@@ -375,8 +375,6 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
 
             directSunLight = lightColor * NdotSun * 1.0 * (1.0 - rainFactor * 0.8);
         }
-        
-        float indirectStrength = mix(0.15, 1.0, shadowStrength);
 
     #endif
     
@@ -542,8 +540,8 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                         if (!inShadow) {
                             // Reuse sunDirBias calculated earlier instead of recomputing
                             float hitNdotL = max(dot(voxelHit.hitNormal, sunDirBias), 0.0);
-                            vec3 sunAlbedo = voxelAlbedo * 30.0 * min(0.15, receiverShadowMask);
-                            directLight = (lightColor * 0.5 + sunAlbedo * 0.5) * hitNdotL * (1.0 - rainFactor * 0.8) * (1.0 - nightFactor * 2.0) + pow2(0.5 - skyLightFactor) * receiverShadowMask;
+                            vec3 sunAlbedo = voxelAlbedo * 20.0 * min(0.25, receiverShadowMask);
+                            directLight = (lightColor * 0.5 + sunAlbedo * 0.5) * 2.0 * hitNdotL * (1.0 - rainFactor * 0.8) * (1.0 - nightFactor * 2.0) + pow2(0.5 - skyLightFactor) * receiverShadowMask;
                             directLight *= shadowTint;
                         }
 

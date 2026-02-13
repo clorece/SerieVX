@@ -43,12 +43,6 @@ float cumulusLayerHeight = cumulusLayerStretch * 2.0;
 
 #include "/lib/atmospherics/clouds/cloudHelpers.glsl"
 #include "/lib/atmospherics/clouds/cumulus.glsl"
-// #include "/lib/atmospherics/clouds/cloudLighting.glsl" // Already included or defined in mainClouds generally, but Allium includes it inside DEFERRED check. We will check this.
-// Checking SerieVX mainClouds.glsl... it doesn't seem to include cloudLighting globally. 
-// Allium includes it inside #if defined DEFERRED1... wrapping.
-// Let's defer that include logic to the standard flow or just include it here if needed.
-// Actually, I will follow the Allium structure below.
-
 
 
 #if defined DEFERRED1 || defined DEFERRED5 || defined DH_WATER || defined GBUFFERS_WATER || defined DEFERRED

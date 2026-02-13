@@ -175,7 +175,7 @@ void main() {
     float roughNoise = texture2D(noisetex, roughCoord).r;
     roughNoise = fract(roughNoise + goldenRatio * mod(float(frameCounter), 360.0));
     roughNoise = noiseMult * (roughNoise - 0.5);
-    normalG += roughNoise;
+    //normalG += roughNoise;
 
     gi = min(GetGI(ao, emissive, normalG, unscaledViewPos.xyz, unscaledViewPos.xyz, nViewPos, depthtex0, dither, 1.0, VdotU, VdotS, entityOrHand, skyLightFactor).rgb, vec3(4.0));
     gi = max(gi, vec3(0.0));

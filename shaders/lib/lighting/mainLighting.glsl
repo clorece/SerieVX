@@ -72,7 +72,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
 
     float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
-    vec3 lightColorM = lightColor * 2.0 * SUNLIGHT_AMOUNT;
+    vec3 lightColorM = lightColor * 1.0 * SUNLIGHT_AMOUNT;
 
     #if GLOBAL_ILLUMINATION == 2
     lightColorM *= 2.0;
@@ -95,7 +95,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     #endif
 
     #ifdef OVERWORLD
-        float skyLightShadowMult = pow2(pow2(lightmapY2));
+        float skyLightShadowMult = 1.0;
     #else
         float skyLightShadowMult = 1.0;
     #endif
@@ -287,9 +287,9 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
                             }
                         #endif
 
-                        if (subsurfaceMode == 2) {
+                        //if (subsurfaceMode == 2) {
                             shadowMult *= GetShadow(shadowPos, lViewPos, lightmap.y, offset, leaves);
-                        }
+                        //}
                     }
 
                     float shadowSmooth = 16.0;
@@ -433,7 +433,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
 
         if (isEyeInWater != 1) {
             float lxFactor = (sunVisibility2 * 0.4 + (0.6 - 0.6 * pow2(invNoonFactor))) * (6.0 - 5.0 * rainFactor);
-            lxFactor *= lightmapY2 + lightmapY2 * 2.0 * pow2(shadowMult.r);
+            //lxFactor *= lightmapY2 + lightmapY2 * 2.0 * pow2(shadowMult.r);
             lxFactor = max0(lxFactor - emission * 1000000.0);
             blockLighting *= pow(lightmapXM / 60.0 + 0.001, 0.09 * lxFactor);
 
@@ -500,7 +500,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     // Scene Lighting Stuff
     vec3 sceneLighting;
     //#if COLORED_LIGHTING_INTERNAL > 0
-            sceneLighting = (lightColorM * shadowMult + ambientColorM * ambientMult) * 0.05;
+            sceneLighting = (lightColorM * shadowMult + ambientColorM * ambientMult) * 0.1;
     //#endif
 
     if (subsurfaceMode == 1) {
